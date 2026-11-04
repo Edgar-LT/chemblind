@@ -11,6 +11,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 
+  <!-- Supabase JS Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <link rel="stylesheet" href="./css/styles.css" />
 </head>
 <body>
@@ -24,8 +27,8 @@
       </div>
 
       <div class="nav-controls">
-        <!-- Píldora de jugadores y modalidad (solo visible cuando ya inició la partida) -->
-        <button type="button" id="change-players-btn" class="players-pill is-hidden" title="Cambiar modalidad o jugadores">
+        <!-- Píldora de jugadores y modalidad -->
+        <button type="button" id="change-players-btn" class="players-pill is-hidden" title="Cambiar modalidad o configuración">
           <span class="dot-active"></span>
           <span id="nav-players-label">Jugadores</span>
           <span class="pill-divider">·</span>
@@ -48,7 +51,7 @@
   <main class="main-stage">
 
     <!-- =================================================================
-         VISTA 1: PANTALLA PREVIA DE BIENVENIDA Y REGISTRO DE JUGADORES
+         VISTA 1: PANTALLA PREVIA DE BIENVENIDA Y CONFIGURACIÓN
          ================================================================= -->
     <section id="onboarding-screen" class="onboarding-screen" aria-labelledby="onboarding-title">
       <div class="onboarding-card">
@@ -56,25 +59,89 @@
         <h1 id="onboarding-title" class="onboarding-headline">
           ChemBlind, <span class="muted">el juego de química para dos.</span>
         </h1>
-        <p class="onboarding-subtitle">
-          Elijan cómo van a jugar hoy y escriban sus nombres para adaptar cada carta en vivo.
+        <p id="onboarding-subtitle" class="onboarding-subtitle">
+          Elijan cómo van a jugar hoy y configuren su sesión.
         </p>
 
+        <!-- Formulario para Invitado (solo aparece si entra por link con ?room=CB-XXXX&key=YYYY) -->
+        <form id="guest-join-form" class="onboarding-form is-hidden">
+          <div class="field-group">
+            <span class="field-label">Invitación Privada</span>
+            <div class="room-share-box" style="margin-bottom: 8px;">
+              <span id="guest-invite-room-code" class="share-code-title">SALA CB-0000</span>
+              <p id="guest-invite-details" class="share-code-desc">
+                Te han invitado a una sesión sincronizada en tiempo real.
+              </p>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="guest-name-input" class="field-label">Tu Nombre</label>
+            <input
+              id="guest-name-input"
+              type="text"
+              class="luxury-input"
+              placeholder="Ingresa tu nombre para unirte..."
+              maxlength="26"
+              autocomplete="off"
+              required
+            />
+          </div>
+
+          <button type="submit" id="guest-join-btn" class="btn-flagship btn-large">
+            <span>Unirme a la Sala en Vivo</span>
+            <span>→</span>
+          </button>
+        </form>
+
+        <!-- Formulario Estándar (Crear sala o jugar local) -->
         <form id="onboarding-form" class="onboarding-form">
 
-          <!-- 1. Selección de Modalidad: Presencial vs Online -->
+          <!-- 1. Selección de Dispositivo: Mismo teléfono vs Sala Online -->
           <div class="field-group">
-            <span class="field-label">Modalidad de Juego</span>
+            <span class="field-label">Dispositivo de Juego</span>
+            <div class="setup-mode-grid" role="radiogroup" aria-label="Tipo de sesión">
+              <label class="setup-mode-option">
+                <input type="radio" name="sessionType" value="local" checked />
+                <span class="setup-mode-box">
+                  <span class="mode-title-row">
+                    <strong class="mode-name">1 Teléfono</strong>
+                    <span class="mode-tag">Juntos</span>
+                  </span>
+                  <span class="mode-desc">
+                    Ambos juegan en este mismo dispositivo pasándose el móvil en cada turno.
+                  </span>
+                </span>
+              </label>
+
+              <label class="setup-mode-option">
+                <input type="radio" name="sessionType" value="room" />
+                <span class="setup-mode-box">
+                  <span class="mode-title-row">
+                    <strong class="mode-name">2 Teléfonos</strong>
+                    <span class="mode-tag">Enlace Privado</span>
+                  </span>
+                  <span class="mode-desc">
+                    Crea una sala en tiempo real con Supabase y envía un enlace a tu cita.
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 2. Modalidad: Presencial vs Online -->
+          <div class="field-group">
+            <span class="field-label">Modalidad de Cartas</span>
             <div class="setup-mode-grid" role="radiogroup" aria-label="Modalidad de juego">
               <label class="setup-mode-option">
                 <input type="radio" name="gameMode" value="presencial" checked />
                 <span class="setup-mode-box">
                   <span class="mode-title-row">
-                    <strong class="mode-name">Modo Presencial</strong>
+                    <strong class="mode-name">Presencial</strong>
                     <span class="mode-tag">Mixto</span>
                   </span>
                   <span class="mode-desc">
-                    Preguntas para romper el hielo, conocerse mejor y pequeños retos cara a cara.
+                    Preguntas íntimas y 15 retos pequeños cara a cara por cada nivel.
                   </span>
                 </span>
               </label>
@@ -83,39 +150,39 @@
                 <input type="radio" name="gameMode" value="online" />
                 <span class="setup-mode-box">
                   <span class="mode-title-row">
-                    <strong class="mode-name">Modo Online</strong>
+                    <strong class="mode-name">Online</strong>
                     <span class="mode-tag">A Distancia</span>
                   </span>
                   <span class="mode-desc">
-                    Preguntas interactivas, adivinanzas y dinámicas para jugar por chat o llamada.
+                    Preguntas interactivas, audios, fotos y dinámicas por chat o llamada.
                   </span>
                 </span>
               </label>
             </div>
           </div>
 
-          <!-- 2. Nombres de los Jugadores -->
+          <!-- 3. Nombres -->
           <div class="input-row">
             <div class="field-group">
-              <label for="setup-p1-input" class="field-label">Persona 1</label>
+              <label for="setup-p1-input" class="field-label">Tu Nombre</label>
               <input
                 id="setup-p1-input"
                 type="text"
                 class="luxury-input"
-                placeholder="Tu nombre..."
+                placeholder="Ej. Mateo..."
                 maxlength="26"
                 autocomplete="off"
                 required
               />
             </div>
 
-            <div class="field-group">
-              <label for="setup-p2-input" class="field-label">Persona 2</label>
+            <div id="setup-p2-container" class="field-group">
+              <label for="setup-p2-input" class="field-label">Nombre de tu Cita</label>
               <input
                 id="setup-p2-input"
                 type="text"
                 class="luxury-input"
-                placeholder="Su nombre..."
+                placeholder="Ej. Valentina..."
                 maxlength="26"
                 autocomplete="off"
                 required
@@ -123,7 +190,7 @@
             </div>
           </div>
 
-          <!-- 3. Nivel Inicial -->
+          <!-- 4. Nivel Inicial -->
           <div class="field-group">
             <span class="field-label">Nivel para comenzar</span>
             <div class="setup-level-grid" role="radiogroup" aria-label="Nivel inicial">
@@ -153,11 +220,52 @@
             </div>
           </div>
 
-          <button type="submit" class="btn-flagship btn-large">
+          <button type="submit" id="onboarding-submit-btn" class="btn-flagship btn-large">
             <span>Comenzar a Jugar</span>
             <span>→</span>
           </button>
         </form>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         VISTA 1.5: SALA DE ESPERA / COMPARTIR ENLACE (MODO 2 TELÉFONOS)
+         ================================================================= -->
+    <section id="room-waiting-screen" class="onboarding-screen is-hidden" aria-labelledby="waiting-room-title">
+      <div class="onboarding-card">
+        <span class="eyebrow-label">Sala En Vivo · Supabase Realtime</span>
+        <h2 id="waiting-room-title" class="onboarding-headline">
+          Invita a tu cita <span class="muted">para conectar los dos teléfonos.</span>
+        </h2>
+        <p class="onboarding-subtitle">
+          Comparte este enlace secreto. Solo quien tenga este enlace exacto podrá unirse a su sesión.
+        </p>
+
+        <div class="room-share-box">
+          <div class="share-code-header">
+            <span id="waiting-room-code" class="share-code-title">CB-0000</span>
+            <span class="live-dot-pulse" title="Servidor Supabase escuchando"></span>
+          </div>
+          <p id="waiting-room-status" class="share-code-desc">
+            Esperando a que tu pareja abra el enlace...
+          </p>
+        </div>
+
+        <div class="share-action-buttons">
+          <button type="button" id="copy-room-link-btn" class="btn-flagship" style="width: 100%;">
+            <span>Copiar Enlace de Invitación</span>
+            <span>⎘</span>
+          </button>
+
+          <button type="button" id="whatsapp-room-link-btn" class="btn-ghost" style="width: 100%;">
+            <span>Enviar por WhatsApp</span>
+            <span>↗</span>
+          </button>
+
+          <button type="button" id="cancel-room-btn" class="btn-ghost" style="width: 100%; border-color: transparent;">
+            <span>Cancelar y volver</span>
+          </button>
+        </div>
       </div>
     </section>
 

@@ -855,6 +855,72 @@ textarea {
   opacity: 1;
 }
 
+/* ==========================================================================
+   Caja de Compartir Sala & Enlace en Vivo (Modo 2 Teléfonos)
+   ========================================================================== */
+
+.room-share-box {
+  padding: 22px;
+  border-radius: var(--radius-control);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-gold);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 18px 0;
+  text-align: center;
+}
+
+.share-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.share-code-title {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--accent-champagne);
+}
+
+.share-code-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.live-dot-pulse {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: var(--accent-champagne);
+  box-shadow: 0 0 10px var(--accent-champagne);
+  animation: pulse 1.8s infinite var(--ease-horology);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.92);
+    opacity: 0.6;
+  }
+}
+
+.share-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;
