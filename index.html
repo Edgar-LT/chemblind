@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CHEMBLIND — Chemistry Unfiltered</title>
+  <meta name="description" content="Juego interactivo de citas, preguntas íntimas y retos para descubrir la química entre dos personas." />
+
+  <!-- Tipografías Editoriales: Cormorant Garamond & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+
+  <!-- Barra Superior Minimalista -->
+  <header class="frosted-nav">
+    <div class="nav-inner">
+      <div class="brand-identity">
+        <span class="brand-emblem" aria-hidden="true">CB</span>
+        <span class="brand-name">ChemBlind</span>
+      </div>
+
+      <div class="nav-controls">
+        <!-- Píldora de jugadores y modalidad (solo visible cuando ya inició la partida) -->
+        <button type="button" id="change-players-btn" class="players-pill is-hidden" title="Cambiar modalidad o jugadores">
+          <span class="dot-active"></span>
+          <span id="nav-players-label">Jugadores</span>
+          <span class="pill-divider">·</span>
+          <span id="nav-mode-badge" class="pill-mode-tag">Presencial</span>
+          <span class="pill-edit-icon">✎</span>
+        </button>
+
+        <button type="button" id="open-custom-modal-btn" class="icon-btn is-hidden">
+          <span>+ Crear Pregunta</span>
+        </button>
+
+        <button type="button" id="theme-toggle-btn" class="icon-btn" aria-label="Alternar tema de color">
+          <span>◐</span>
+          <span id="theme-label">Marfil</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-stage">
+
+    <!-- =================================================================
+         VISTA 1: PANTALLA PREVIA DE BIENVENIDA Y REGISTRO DE JUGADORES
+         ================================================================= -->
+    <section id="onboarding-screen" class="onboarding-screen" aria-labelledby="onboarding-title">
+      <div class="onboarding-card">
+        <span class="eyebrow-label">Chemistry Unfiltered</span>
+        <h1 id="onboarding-title" class="onboarding-headline">
+          ChemBlind, <span class="muted">el juego de química para dos.</span>
+        </h1>
+        <p class="onboarding-subtitle">
+          Elijan cómo van a jugar hoy y escriban sus nombres para adaptar cada carta en vivo.
+        </p>
+
+        <form id="onboarding-form" class="onboarding-form">
+
+          <!-- 1. Selección de Modalidad: Presencial vs Online -->
+          <div class="field-group">
+            <span class="field-label">Modalidad de Juego</span>
+            <div class="setup-mode-grid" role="radiogroup" aria-label="Modalidad de juego">
+              <label class="setup-mode-option">
+                <input type="radio" name="gameMode" value="presencial" checked />
+                <span class="setup-mode-box">
+                  <span class="mode-title-row">
+                    <strong class="mode-name">Modo Presencial</strong>
+                    <span class="mode-tag">Mixto</span>
+                  </span>
+                  <span class="mode-desc">
+                    Preguntas para romper el hielo, conocerse mejor y pequeños retos cara a cara.
+                  </span>
+                </span>
+              </label>
+
+              <label class="setup-mode-option">
+                <input type="radio" name="gameMode" value="online" />
+                <span class="setup-mode-box">
+                  <span class="mode-title-row">
+                    <strong class="mode-name">Modo Online</strong>
+                    <span class="mode-tag">A Distancia</span>
+                  </span>
+                  <span class="mode-desc">
+                    Preguntas interactivas, adivinanzas y dinámicas para jugar por chat o llamada.
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 2. Nombres de los Jugadores -->
+          <div class="input-row">
+            <div class="field-group">
+              <label for="setup-p1-input" class="field-label">Persona 1</label>
+              <input
+                id="setup-p1-input"
+                type="text"
+                class="luxury-input"
+                placeholder="Tu nombre..."
+                maxlength="26"
+                autocomplete="off"
+                required
+              />
+            </div>
+
+            <div class="field-group">
+              <label for="setup-p2-input" class="field-label">Persona 2</label>
+              <input
+                id="setup-p2-input"
+                type="text"
+                class="luxury-input"
+                placeholder="Su nombre..."
+                maxlength="26"
+                autocomplete="off"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- 3. Nivel Inicial -->
+          <div class="field-group">
+            <span class="field-label">Nivel para comenzar</span>
+            <div class="setup-level-grid" role="radiogroup" aria-label="Nivel inicial">
+              <label class="setup-level-option">
+                <input type="radio" name="initialLevel" value="1" checked />
+                <span class="setup-level-box">
+                  <strong class="setup-roman">Nivel I</strong>
+                  <span class="setup-level-name">Romper el Hielo</span>
+                </span>
+              </label>
+
+              <label class="setup-level-option">
+                <input type="radio" name="initialLevel" value="2" />
+                <span class="setup-level-box">
+                  <strong class="setup-roman">Nivel II</strong>
+                  <span class="setup-level-name">Conexión Profunda</span>
+                </span>
+              </label>
+
+              <label class="setup-level-option">
+                <input type="radio" name="initialLevel" value="3" />
+                <span class="setup-level-box">
+                  <strong class="setup-roman">Nivel III</strong>
+                  <span class="setup-level-name">Tensión &amp; Chispa</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-flagship btn-large">
+            <span>Comenzar a Jugar</span>
+            <span>→</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         VISTA 2: ESCENARIO DE JUEGO LIMPIO (CARTA PROTAGONISTA)
+         ================================================================= -->
+    <section id="game-screen" class="game-screen is-hidden" aria-label="Escenario de cartas">
+
+      <!-- Selector Superior de Niveles y Química Sutil -->
+      <div class="game-top-bar">
+        <div class="level-selector" role="tablist" aria-label="Niveles de intensidad">
+          <button type="button" class="level-tab active" data-level-btn="1" role="tab">
+            <span class="roman-num">I</span>
+            <span>Romper el Hielo</span>
+          </button>
+          <button type="button" class="level-tab" data-level-btn="2" role="tab">
+            <span class="roman-num">II</span>
+            <span>Conexión</span>
+          </button>
+          <button type="button" class="level-tab" data-level-btn="3" role="tab">
+            <span class="roman-num">III</span>
+            <span>Chispa</span>
+          </button>
+        </div>
+
+        <div class="chemistry-pill" title="Afinidad acumulada en la sesión">
+          <span class="chemistry-label">Química</span>
+          <div class="chemistry-mini-track">
+            <div id="chemistry-bar-fill" class="chemistry-mini-fill"></div>
+          </div>
+          <span id="chemistry-percentage" class="chemistry-value tabular-nums">15%</span>
+        </div>
+      </div>
+
+      <!-- La Carta Central -->
+      <article id="stage-card-wrapper" class="playing-card">
+
+        <!-- Cabecera de la Carta: Turno y Categoría -->
+        <div class="card-meta-header">
+          <div class="turn-indicator">
+            <span id="turn-badge-text" class="turn-badge">Turno</span>
+            <span id="target-player-label" class="turn-target"></span>
+          </div>
+
+          <span id="card-category-badge" class="category-tag">Pregunta</span>
+        </div>
+
+        <!-- Cuerpo Principal: La Pregunta o Reto -->
+        <div class="card-body">
+          <p id="card-prompt-text" class="card-prompt-text"></p>
+          <p id="card-prompt-hint" class="card-prompt-hint"></p>
+
+          <!-- Cronómetro Inline (Solo aparece cuando la carta es un reto con tiempo) -->
+          <div id="inline-timer-box" class="inline-timer-box is-hidden">
+            <div class="timer-display">
+              <span class="timer-dot"></span>
+              <span id="chrono-seconds-readout" class="timer-seconds tabular-nums">20s</span>
+            </div>
+            <button type="button" id="chrono-toggle-btn" class="btn-timer-action">
+              Iniciar Reto
+            </button>
+            <button type="button" id="chrono-reset-btn" class="btn-timer-reset" title="Reiniciar reloj">
+              ↺
+            </button>
+          </div>
+        </div>
+
+        <!-- Pie de la Carta: Acciones Limpias -->
+        <div class="card-footer">
+          <div class="footer-secondary-actions">
+            <button type="button" id="wildcard-skip-btn" class="btn-ghost" title="Saltar esta carta usando un comodín">
+              <span>Saltar</span>
+              <span id="wildcard-btn-count" class="tabular-nums">(2)</span>
+            </button>
+
+            <button type="button" id="share-whatsapp-btn" class="btn-ghost" title="Enviar esta carta por WhatsApp">
+              <span id="share-btn-label">Compartir ↗</span>
+            </button>
+          </div>
+
+          <button type="button" id="complete-turn-btn" class="btn-flagship">
+            <span>Siguiente Carta</span>
+            <span>→</span>
+          </button>
+        </div>
+
+      </article>
+
+    </section>
+
+  </main>
+
+  <!-- =================================================================
+       MODAL: CREAR PREGUNTA O RETO PERSONALIZADO (Bajo Demanda)
+       ================================================================= -->
+  <div id="custom-card-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="custom-modal-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <span id="custom-modal-title" class="eyebrow-label" style="margin-bottom: 0;">Añadir Carta a Medida</span>
+        <button type="button" id="close-custom-modal-btn" class="icon-btn">✕</button>
+      </div>
+
+      <p class="modal-desc">
+        Escribe una pregunta o reto propio. Saldrá inmediatamente en la partida.
+      </p>
+
+      <form id="custom-card-form" class="modal-form">
+        <div class="field-group">
+          <label for="custom-prompt-input" class="field-label">Pregunta o Reto</label>
+          <textarea
+            id="custom-prompt-input"
+            class="luxury-textarea"
+            placeholder="Ej: ¿Qué fue lo primero que pensaste cuando empezamos a hablar?"
+            maxlength="220"
+            required
+          ></textarea>
+        </div>
+
+        <div class="input-row">
+          <div class="field-group">
+            <label for="custom-level-select" class="field-label">Nivel</label>
+            <select id="custom-level-select" class="luxury-select">
+              <option value="1">Nivel I · Romper el Hielo</option>
+              <option value="2">Nivel II · Conexión Profunda</option>
+              <option value="3">Nivel III · Tensión &amp; Chispa</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="custom-timer-select" class="field-label">Tiempo (Opcional)</label>
+            <select id="custom-timer-select" class="luxury-select tabular-nums">
+              <option value="0">Sin cronómetro</option>
+              <option value="20">Reto de 20 segundos</option>
+              <option value="30">Reto de 30 segundos</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn-flagship" style="width: 100%;">
+            Jugar esta Carta Ahora
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notificación Toast Discreta -->
+  <div id="toast-notification" class="toast-notification" role="status" aria-live="polite"></div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
