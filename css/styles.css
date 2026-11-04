@@ -531,6 +531,11 @@ textarea {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+  transition: all 0.25s var(--ease-horology);
+}
+
+.input-row.is-single-column {
+  grid-template-columns: 1fr;
 }
 
 .field-group {
@@ -1087,40 +1092,68 @@ textarea {
    ========================================================================== */
 
 .room-share-box {
-  padding: 22px;
-  border-radius: var(--radius-control);
-  background: var(--bg-subtle);
+  padding: 26px 22px;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.005) 100%),
+    var(--bg-subtle);
   border: 1px solid var(--border-gold);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 18px 0;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 24px;
   text-align: center;
+  position: relative;
+  overflow: hidden;
 }
 
-.share-code-header {
+.room-badge-row {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
 }
 
-.share-code-title {
-  font-family: var(--font-serif);
-  font-size: 2rem;
+.room-capsule-tag {
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
   color: var(--accent-champagne);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-gold);
+  background: var(--accent-champagne-soft);
 }
 
-.share-code-desc {
-  font-size: 0.85rem;
+.room-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 500;
   color: var(--text-secondary);
 }
 
+.share-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0;
+}
+
+.share-code-title {
+  font-family: var(--font-sans);
+  font-size: clamp(2.2rem, 5vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent-champagne);
+}
+
 .live-dot-pulse {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background-color: var(--accent-champagne);
   box-shadow: 0 0 10px var(--accent-champagne);
@@ -1129,23 +1162,49 @@ textarea {
 
 @keyframes pulse {
   0% {
-    transform: scale(0.92);
-    opacity: 0.6;
+    transform: scale(0.9);
+    opacity: 0.5;
   }
   50% {
-    transform: scale(1.35);
+    transform: scale(1.3);
     opacity: 1;
   }
   100% {
-    transform: scale(0.92);
-    opacity: 0.6;
+    transform: scale(0.9);
+    opacity: 0.5;
   }
+}
+
+.room-status-wrapper {
+  max-width: 380px;
+}
+
+.share-code-desc {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 .share-action-buttons {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.btn-text-only {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--text-muted) !important;
+  font-size: 0.8125rem;
+  padding: 8px 16px;
+  margin-top: 4px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.btn-text-only:hover {
+  color: var(--text-primary) !important;
 }
 
 /* Banner de Salas Activas en Onboarding */

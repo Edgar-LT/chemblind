@@ -72,8 +72,13 @@
         <form id="guest-join-form" class="onboarding-form is-hidden">
           <div class="field-group">
             <span class="field-label">Invitación Privada</span>
-            <div class="room-share-box" style="margin-bottom: 8px;">
-              <span id="guest-invite-room-code" class="share-code-title">SALA CB-0000</span>
+            <div class="room-share-box" style="margin: 4px 0 16px;">
+              <div class="room-badge-row">
+                <span class="room-capsule-tag">INVITACIÓN ACTIVA</span>
+              </div>
+              <div class="share-code-header">
+                <span id="guest-invite-room-code" class="share-code-title tabular-nums">SALA CB-0000</span>
+              </div>
               <p id="guest-invite-details" class="share-code-desc">
                 Te han invitado a una sesión sincronizada en tiempo real.
               </p>
@@ -124,10 +129,10 @@
                 <span class="setup-mode-box">
                   <span class="mode-title-row">
                     <strong class="mode-name">2 Teléfonos</strong>
-                    <span class="mode-tag">Enlace Privado</span>
+                    <span class="mode-tag">Enlace</span>
                   </span>
                   <span class="mode-desc">
-                    Crea una sala en tiempo real con Supabase y envía un enlace a tu cita.
+                    Cada quien en su móvil, sincronizados en vivo con un enlace exclusivo.
                   </span>
                 </span>
               </label>
@@ -175,8 +180,8 @@
           </div>
 
           <!-- 3. Nombres -->
-          <div class="input-row">
-            <div class="field-group">
+          <div class="input-row" id="players-input-row">
+            <div class="field-group" id="setup-p1-container">
               <label for="setup-p1-input" class="field-label">Tu Nombre</label>
               <input
                 id="setup-p1-input"
@@ -187,6 +192,9 @@
                 autocomplete="off"
                 required
               />
+              <p class="field-hint" id="p1-field-hint" style="display: none; font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px;">
+                Tu cita ingresará su nombre al unirse con el enlace de invitación.
+              </p>
             </div>
 
             <div id="setup-p2-container" class="field-group">
@@ -246,37 +254,47 @@
          ================================================================= -->
     <section id="room-waiting-screen" class="onboarding-screen is-hidden" aria-labelledby="waiting-room-title">
       <div class="onboarding-card">
-        <span class="eyebrow-label">Sala En Vivo · Supabase Realtime</span>
+        <span class="eyebrow-label">SALA PRIVADA · EN TIEMPO REAL</span>
         <h2 id="waiting-room-title" class="onboarding-headline">
-          Invita a tu cita <span class="muted">para conectar los dos teléfonos.</span>
+          Invita a tu cita <span class="muted">para conectar ambos teléfonos.</span>
         </h2>
         <p class="onboarding-subtitle">
-          Comparte este enlace secreto. Solo quien tenga este enlace exacto podrá unirse a su sesión.
+          Comparte este enlace exclusivo. Tu pareja entrará directo a tu partida al abrirlo.
         </p>
 
         <div class="room-share-box">
-          <div class="share-code-header">
-            <span id="waiting-room-code" class="share-code-title">CB-0000</span>
-            <span class="live-dot-pulse" title="Servidor Supabase escuchando"></span>
+          <div class="room-badge-row">
+            <span class="room-capsule-tag">SALA ACTIVA</span>
+            <span class="room-live-pill">
+              <span class="live-dot-pulse" aria-hidden="true"></span>
+              <span>En vivo</span>
+            </span>
           </div>
-          <p id="waiting-room-status" class="share-code-desc">
-            Esperando a que tu pareja abra el enlace...
-          </p>
+
+          <div class="share-code-header">
+            <span id="waiting-room-code" class="share-code-title tabular-nums">CB-0000</span>
+          </div>
+
+          <div class="room-status-wrapper">
+            <p id="waiting-room-status" class="share-code-desc">
+              Esperando a que tu pareja abra el enlace...
+            </p>
+          </div>
         </div>
 
         <div class="share-action-buttons">
-          <button type="button" id="copy-room-link-btn" class="btn-flagship" style="width: 100%;">
+          <button type="button" id="copy-room-link-btn" class="btn-flagship btn-large">
             <span>Copiar Enlace de Invitación</span>
             <span>⎘</span>
           </button>
 
-          <button type="button" id="whatsapp-room-link-btn" class="btn-ghost" style="width: 100%;">
+          <button type="button" id="whatsapp-room-link-btn" class="btn-ghost btn-large">
             <span>Enviar por WhatsApp</span>
             <span>↗</span>
           </button>
 
-          <button type="button" id="cancel-room-btn" class="btn-ghost" style="width: 100%; border-color: transparent;">
-            <span>Cancelar y volver</span>
+          <button type="button" id="cancel-room-btn" class="btn-ghost btn-text-only">
+            <span>← Cancelar sala y volver</span>
           </button>
         </div>
       </div>

@@ -210,17 +210,27 @@ class ChemBlindAppController {
     this.elements.sessionTypeRadios.forEach((radio) => {
       radio.addEventListener('change', () => {
         const isRoom = radio.value === 'room';
+        const playersRow = document.getElementById('players-input-row');
+        const p1Hint = document.getElementById('p1-field-hint');
+
         if (this.elements.setupP2Container) {
           this.elements.setupP2Container.style.display = isRoom ? 'none' : 'flex';
           if (this.elements.setupP2Input) {
             this.elements.setupP2Input.required = !isRoom;
           }
         }
+        if (playersRow) {
+          playersRow.classList.toggle('is-single-column', isRoom);
+        }
+        if (p1Hint) {
+          p1Hint.style.display = isRoom ? 'block' : 'none';
+        }
         if (this.elements.onboardingSubmitBtn) {
           this.elements.onboardingSubmitBtn.querySelector('span:first-child').textContent = isRoom
             ? 'Crear Sala y Obtener Enlace'
             : 'Comenzar a Jugar';
         }
+        this.refreshActiveRooms();
       });
     });
 
