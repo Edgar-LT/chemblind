@@ -1,0 +1,910 @@
+/* ==========================================================================
+   L'HEURE CONFIDENTIELLE — Minimalist Luxury Card Game UI
+   Focused, Spacious, Zero-Clutter, Editorial Typography & Tactile Surfaces.
+   ========================================================================== */
+
+:root {
+  /* Superficies Modo Oscuro (Obsidian & Titanium) */
+  --bg-canvas: #0a0a0c;
+  --bg-elevated: #141417;
+  --bg-elevated-hover: #1a1a1f;
+  --bg-subtle: #1d1d22;
+  --bg-glass: rgba(16, 16, 19, 0.78);
+
+  /* Tipografía calibrada */
+  --text-primary: #f5f5f7;
+  --text-secondary: #86868b;
+  --text-muted: #58585e;
+
+  /* Bordes y Biseles Especulares */
+  --border-hairline: rgba(255, 255, 255, 0.08);
+  --border-specular: rgba(255, 255, 255, 0.16);
+  --border-gold: rgba(197, 160, 89, 0.36);
+
+  /* Acentos de Materiales Nobles */
+  --accent-champagne: #c5a059;
+  --accent-champagne-light: #dfc082;
+  --accent-champagne-soft: rgba(197, 160, 89, 0.12);
+  --accent-chrono-orange: #e0533c;
+
+  /* Tipografías */
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Geometría y Física de Movimiento */
+  --radius-card: 28px;
+  --radius-control: 14px;
+  --radius-pill: 9999px;
+  --ease-horology: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --shadow-stage: 0 32px 64px -16px rgba(0, 0, 0, 0.65);
+}
+
+/* Variante Modo Claro Editorial (Alabaster & Ivory) */
+[data-theme="light"] {
+  --bg-canvas: #f5f5f7;
+  --bg-elevated: #ffffff;
+  --bg-elevated-hover: #fafafa;
+  --bg-subtle: #ebebf0;
+  --bg-glass: rgba(255, 255, 255, 0.82);
+
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-muted: #98989d;
+
+  --border-hairline: rgba(0, 0, 0, 0.08);
+  --border-specular: rgba(255, 255, 255, 0.95);
+  --border-gold: rgba(158, 123, 59, 0.35);
+
+  --accent-champagne: #9e7b3b;
+  --accent-champagne-light: #7c5e26;
+  --accent-champagne-soft: rgba(158, 123, 59, 0.1);
+
+  --shadow-stage: 0 24px 50px -12px rgba(0, 0, 0, 0.08);
+}
+
+/* ==========================================================================
+   Reset & Base
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: background-color 0.45s var(--ease-horology),
+              color 0.45s var(--ease-horology);
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(197, 160, 89, 0.06) 0%, transparent 55%);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.is-hidden {
+  display: none !important;
+}
+
+/* ==========================================================================
+   Barra Superior Minimalista
+   ========================================================================== */
+
+.frosted-nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--bg-glass);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.nav-inner {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-emblem {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border-gold);
+  background: var(--accent-champagne-soft);
+  display: grid;
+  place-items: center;
+  color: var(--accent-champagne);
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.brand-name {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.players-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: border-color 0.25s var(--ease-horology);
+}
+
+.players-pill:hover {
+  border-color: var(--border-gold);
+}
+
+.players-pill .dot-active {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent-champagne);
+}
+
+.pill-divider {
+  color: var(--text-muted);
+}
+
+.pill-mode-tag {
+  color: var(--accent-champagne);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pill-edit-icon {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s var(--ease-horology);
+}
+
+.icon-btn:hover {
+  border-color: var(--border-specular);
+  background: var(--bg-elevated-hover);
+}
+
+/* ==========================================================================
+   Contenedor Central Centrado (Mucha Respiración / Espacio Negativo)
+   ========================================================================== */
+
+.main-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 20px 56px;
+}
+
+/* ==========================================================================
+   VISTA 1: Pantalla Previa de Bienvenida (Onboarding)
+   ========================================================================== */
+
+.onboarding-screen {
+  width: 100%;
+  max-width: 540px;
+  animation: fadeUp 0.5s var(--ease-horology);
+}
+
+.onboarding-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%),
+    var(--bg-elevated);
+  border: 1px solid var(--border-hairline);
+  border-top-color: var(--border-specular);
+  border-radius: var(--radius-card);
+  padding: 42px 38px;
+  box-shadow: var(--shadow-stage);
+}
+
+.eyebrow-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--accent-champagne);
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+.onboarding-headline {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 3.5vw, 2.75rem);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+
+.onboarding-headline .muted {
+  color: var(--text-secondary);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.onboarding-subtitle {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  margin-bottom: 28px;
+}
+
+.onboarding-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+}
+
+.luxury-input,
+.luxury-select,
+.luxury-textarea {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: var(--radius-control);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.25s var(--ease-horology);
+}
+
+.luxury-textarea {
+  resize: vertical;
+  min-height: 88px;
+}
+
+.luxury-input:focus,
+.luxury-select:focus,
+.luxury-textarea:focus {
+  border-color: var(--accent-champagne);
+}
+
+/* Selector de Modalidad (Presencial vs Online) en el Onboarding */
+.setup-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.setup-mode-option {
+  cursor: pointer;
+}
+
+.setup-mode-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.setup-mode-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  padding: 16px;
+  border-radius: var(--radius-control);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  transition: all 0.25s var(--ease-horology);
+}
+
+.mode-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mode-name {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mode-tag {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-hairline);
+  color: var(--text-secondary);
+}
+
+.mode-desc {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.setup-mode-option input:checked + .setup-mode-box {
+  border-color: var(--accent-champagne);
+  background: var(--accent-champagne-soft);
+}
+
+.setup-mode-option input:checked + .setup-mode-box .mode-name,
+.setup-mode-option input:checked + .setup-mode-box .mode-tag {
+  color: var(--accent-champagne);
+  border-color: var(--border-gold);
+}
+
+/* Selector de Nivel Inicial en el Onboarding */
+.setup-level-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.setup-level-option {
+  cursor: pointer;
+}
+
+.setup-level-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.setup-level-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 14px 10px;
+  border-radius: var(--radius-control);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  transition: all 0.25s var(--ease-horology);
+}
+
+.setup-roman {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  color: var(--accent-champagne);
+}
+
+.setup-level-name {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.setup-level-option input:checked + .setup-level-box {
+  border-color: var(--accent-champagne);
+  background: var(--accent-champagne-soft);
+}
+
+.setup-level-option input:checked + .setup-level-box .setup-level-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   VISTA 2: Escenario de Juego (Una Sola Carta Protagonista)
+   ========================================================================== */
+
+.game-screen {
+  width: 100%;
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeUp 0.45s var(--ease-horology);
+}
+
+.game-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.level-selector {
+  display: inline-flex;
+  background: var(--bg-elevated);
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-hairline);
+  gap: 4px;
+}
+
+.level-tab {
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s var(--ease-horology);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.level-tab .roman-num {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--accent-champagne);
+}
+
+.level-tab.active {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  border: 1px solid var(--border-gold);
+}
+
+/* Medidor de Química Minimalista en Píldora */
+.chemistry-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-hairline);
+}
+
+.chemistry-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+}
+
+.chemistry-mini-track {
+  width: 64px;
+  height: 5px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.chemistry-mini-fill {
+  height: 100%;
+  width: 18%;
+  background: var(--accent-champagne);
+  border-radius: var(--radius-pill);
+  transition: width 0.5s var(--ease-horology);
+}
+
+.chemistry-value {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--accent-champagne);
+}
+
+/* La Carta Principal */
+.playing-card {
+  position: relative;
+  min-height: 400px;
+  padding: 40px 44px;
+  border-radius: var(--radius-card);
+  background:
+    linear-gradient(165deg, rgba(197, 160, 89, 0.06) 0%, rgba(255, 255, 255, 0.015) 50%, transparent 100%),
+    var(--bg-elevated);
+  border: 1px solid var(--border-gold);
+  border-top-color: var(--border-specular);
+  box-shadow: var(--shadow-stage);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.35s var(--ease-horology),
+              opacity 0.28s var(--ease-horology);
+}
+
+.playing-card.is-transitioning {
+  opacity: 0;
+  transform: translateY(8px) scale(0.99);
+}
+
+.card-meta-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.turn-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.turn-badge {
+  padding: 5px 13px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-champagne-soft);
+  color: var(--accent-champagne);
+  border: 1px solid var(--border-gold);
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.turn-target {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.category-tag {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-secondary);
+}
+
+/* Cuerpo de la Pregunta */
+.card-body {
+  margin: 38px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.card-prompt-text {
+  font-family: var(--font-serif);
+  font-size: clamp(1.75rem, 2.8vw, 2.45rem);
+  font-weight: 500;
+  line-height: 1.24;
+  color: var(--text-primary);
+}
+
+.card-prompt-hint {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+}
+
+/* Cronómetro Inline (Solo aparece cuando la carta lleva tiempo) */
+.inline-timer-box {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-gold);
+}
+
+.timer-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timer-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-champagne);
+}
+
+.timer-seconds {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.btn-timer-action {
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-champagne);
+  color: #0a0a0c;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-timer-reset {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+/* Pie de la Carta */
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border-hairline);
+  flex-wrap: wrap;
+}
+
+.footer-secondary-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Botones */
+.btn-flagship {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 26px;
+  border-radius: var(--radius-pill);
+  background: var(--text-primary);
+  color: var(--bg-canvas);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.25s var(--ease-horology), opacity 0.25s ease;
+}
+
+.btn-flagship:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.btn-flagship:active {
+  transform: scale(0.98);
+}
+
+.btn-large {
+  padding: 15px 28px;
+  font-size: 0.95rem;
+  width: 100%;
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-horology);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--border-gold);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Modal Limpio (Crear Pregunta) & Toast
+   ========================================================================== */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(10, 10, 12, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease-horology);
+}
+
+.modal-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-dialog {
+  width: 100%;
+  max-width: 460px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-card);
+  padding: 32px;
+  box-shadow: var(--shadow-stage);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.modal-desc {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-actions {
+  margin-top: 6px;
+}
+
+.toast-notification {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translate(-50%, 20px);
+  z-index: 120;
+  padding: 11px 22px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-gold);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-stage);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s var(--ease-horology);
+}
+
+.toast-notification.is-visible {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   Responsividad Móvil
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .onboarding-card {
+    padding: 30px 22px;
+  }
+
+  .input-row,
+  .setup-mode-grid,
+  .setup-level-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .playing-card {
+    padding: 28px 22px;
+    min-height: 360px;
+  }
+
+  .game-top-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .level-selector {
+    justify-content: space-between;
+  }
+
+  .chemistry-pill {
+    justify-content: space-between;
+  }
+
+  .card-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .footer-secondary-actions {
+    justify-content: space-between;
+  }
+}
