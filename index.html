@@ -40,6 +40,11 @@
           <span>+ Crear Pregunta</span>
         </button>
 
+        <button type="button" id="view-rooms-btn" class="icon-btn" title="Ver mis salas activas">
+          <span class="dot-active" style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent-champagne);"></span>
+          <span id="active-rooms-count-label">Salas (0/3)</span>
+        </button>
+
         <button type="button" id="theme-toggle-btn" class="icon-btn" aria-label="Alternar tema de color">
           <span>◐</span>
           <span id="theme-label">Marfil</span>
@@ -126,6 +131,14 @@
                   </span>
                 </span>
               </label>
+            </div>
+
+            <!-- Banner sutil de salas activas -->
+            <div id="active-rooms-banner" class="active-rooms-banner is-hidden">
+              <span id="active-rooms-banner-text" class="banner-text">Tienes 1 sala activa.</span>
+              <button type="button" id="banner-view-rooms-btn" class="btn-ghost" style="padding: 4px 12px; font-size: 0.75rem;">
+                Ver y Cambiar
+              </button>
             </div>
           </div>
 
@@ -410,6 +423,29 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal: Mis Salas Activas (Visualizar, Cambiar y Cerrar) -->
+  <div id="active-rooms-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="rooms-modal-title">
+    <div class="modal-dialog" style="max-width: 540px;">
+      <div class="modal-header">
+        <span id="rooms-modal-title" class="eyebrow-label" style="margin-bottom: 0;">Salas Activas de tu Dispositivo</span>
+        <button type="button" id="close-rooms-modal-btn" class="icon-btn">✕</button>
+      </div>
+
+      <p class="modal-desc">
+        Puedes tener hasta 3 salas activas (duración de 3h). Elige una sala para reanudar la partida o ciérrala para liberar espacio.
+      </p>
+
+      <div id="active-rooms-list" class="active-rooms-list">
+        <p class="empty-rooms-msg">No tienes salas activas en este momento.</p>
+      </div>
+
+      <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.75rem; color: var(--text-secondary);">Máximo 3 salas por dispositivo.</span>
+        <button type="button" id="close-rooms-modal-btn-2" class="btn-ghost">Cerrar</button>
+      </div>
     </div>
   </div>
 

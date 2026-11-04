@@ -921,6 +921,107 @@ textarea {
   gap: 12px;
 }
 
+/* Banner de Salas Activas en Onboarding */
+.active-rooms-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-top: 10px;
+  border-radius: var(--radius-control);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-gold);
+}
+
+.banner-text {
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Lista y Tarjetas de Salas Activas (Modal) */
+.active-rooms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.active-room-card {
+  padding: 16px 18px;
+  border-radius: var(--radius-control);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.25s var(--ease-horology);
+}
+
+.active-room-card:hover {
+  border-color: var(--border-gold);
+}
+
+.room-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.room-card-code {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--accent-champagne);
+  letter-spacing: 0.06em;
+}
+
+.room-card-status {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-hairline);
+}
+
+.room-card-status.is-waiting {
+  color: var(--text-secondary);
+}
+
+.room-card-status.is-connected {
+  color: var(--accent-champagne);
+  border-color: var(--border-gold);
+  background: var(--accent-champagne-soft);
+}
+
+.room-card-details {
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.room-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.empty-rooms-msg {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  text-align: center;
+  padding: 24px 12px;
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;

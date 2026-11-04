@@ -26,7 +26,9 @@ import {
   fetchRoomData,
   subscribeToRoomChannel,
   broadcastRoomEvent,
-  updateRoomRecord
+  updateRoomRecord,
+  fetchClientActiveRooms,
+  closeGameRoom
 } from './supabase-client.js';
 
 const STORAGE_KEY_CUSTOM_CARDS = 'chemblind_custom_cards_v1';
@@ -52,6 +54,7 @@ class ChemBlindAppController {
     this.cacheElements();
     this.loadStoredPreferences();
     this.bindEvents();
+    await this.refreshActiveRooms();
     await this.checkUrlInvitation();
   }
 
@@ -62,6 +65,8 @@ class ChemBlindAppController {
       changePlayersBtn: byId('change-players-btn'),
       navPlayersLabel: byId('nav-players-label'),
       navModeBadge: byId('nav-mode-badge'),
+      viewRoomsBtn: byId('view-rooms-btn'),
+      activeRoomsCountLabel: byId('active-rooms-count-label'),
       openCustomModalBtn: byId('open-custom-modal-btn'),
       themeToggleBtn: byId('theme-toggle-btn'),
       themeLabel: byId('theme-label'),
@@ -75,6 +80,15 @@ class ChemBlindAppController {
       setupP2Container: byId('setup-p2-container'),
       setupP2Input: byId('setup-p2-input'),
       sessionTypeRadios: document.querySelectorAll('input[name="sessionType"]'),
+      activeRoomsBanner: byId('active-rooms-banner'),
+      activeRoomsBannerText: byId('active-rooms-banner-text'),
+      bannerViewRoomsBtn: byId('banner-view-rooms-btn'),
+
+      // Modal: Mis Salas Activas
+      activeRoomsModal: byId('active-rooms-modal'),
+      closeRoomsModalBtn: byId('close-rooms-modal-btn'),
+      closeRoomsModalBtn2: byId('close-rooms-modal-btn-2'),
+      activeRoomsList: byId('active-rooms-list'),
 
       // Guest Join Form (active if opened via invite link)
       guestJoinForm: byId('guest-join-form'),
@@ -217,6 +231,29 @@ class ChemBlindAppController {
     this.elements.guestJoinForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
       await this.handleGuestJoinSubmit();
+    });
+
+    // View & Switch Active Rooms Modal
+    this.elements.viewRoomsBtn?.addEventListener('click', () => {
+      this.openActiveRoomsModal();
+    });
+
+    this.elements.bannerViewRoomsBtn?.addEventListener('click', () => {
+      this.openActiveRoomsModal();
+    });
+
+    this.elements.closeRoomsModalBtn?.addEventListener('click', () => {
+      this.closeActiveRoomsModal();
+    });
+
+    this.elements.closeRoomsModalBtn2?.addEventListener('click', () => {
+      this.closeActiveRoomsModal();
+    });
+
+    this.elements.activeRoomsModal?.addEventListener('click', (e) => {
+      if (e.target === this.elements.activeRoomsModal) {
+        this.closeActiveRoomsModal();
+      }
     });
 
     // Room Share Actions
@@ -437,6 +474,7 @@ class ChemBlindAppController {
 
       // Connect to Realtime Channel
       this.connectToRealtimeRoom(roomResult.code);
+      await this.refreshActiveRooms();
     } catch (err) {
       this.showToast('No se pudo conectar con el servidor.');
       console.error(err);
@@ -624,6 +662,190 @@ class ChemBlindAppController {
       }
     }
     this.roomSession = null;
+    this.refreshActiveRooms();
+  }
+
+  /* ==========================================================================
+     Active Rooms Management & Switching
+     ========================================================================== */
+
+  async refreshActiveRooms() {
+    try {
+      this.activeRoomsList = await fetchClientActiveRooms();
+      const count = this.activeRoomsList.length;
+
+      if (this.elements.activeRoomsCountLabel) {
+        this.elements.activeRoomsCountLabel.textContent = `Salas (${count}/3)`;
+      }
+
+      if (this.elements.activeRoomsBanner) {
+        const isRoomSelected = document.querySelector('input[name="sessionType"]:checked')?.value === 'room';
+        if (count > 0 && isRoomSelected) {
+          this.elements.activeRoomsBanner.classList.remove('is-hidden');
+          if (this.elements.activeRoomsBannerText) {
+            this.elements.activeRoomsBannerText.textContent = count === 1
+              ? 'Tienes 1 sala activa en este dispositivo.'
+              : `Tienes ${count} salas activas (máximo 3).`;
+          }
+        } else {
+          this.elements.activeRoomsBanner.classList.add('is-hidden');
+        }
+      }
+    } catch (err) {
+      console.warn('Error refreshing active rooms:', err);
+    }
+  }
+
+  async openActiveRoomsModal() {
+    await this.refreshActiveRooms();
+    const listEl = this.elements.activeRoomsList;
+    if (!listEl) return;
+
+    listEl.innerHTML = '';
+
+    if (!this.activeRoomsList || this.activeRoomsList.length === 0) {
+      const emptyP = document.createElement('p');
+      emptyP.className = 'empty-rooms-msg';
+      emptyP.textContent = 'No tienes salas activas creadas en este dispositivo.';
+      listEl.appendChild(emptyP);
+    } else {
+      this.activeRoomsList.forEach((room) => {
+        const card = document.createElement('div');
+        card.className = 'active-room-card';
+
+        const remainingMin = Math.max(1, Math.floor((room.seconds_remaining || 0) / 60));
+        const hours = Math.floor(remainingMin / 60);
+        const mins = remainingMin % 60;
+        const timeText = hours > 0 ? `${hours}h ${mins}m restantes` : `${mins}m restantes`;
+
+        const isConnected = room.player_two_joined;
+        const partnerName = isConnected ? room.player_two_name : 'Esperando a tu pareja...';
+        const modeLabel = room.mode === 'online' ? 'Online' : 'Presencial';
+        const isCurrent = this.roomSession?.code === room.code;
+
+        card.innerHTML = `
+          <div class="room-card-header">
+            <span class="room-card-code">${room.code} ${isCurrent ? '<span style="font-size: 0.72rem; color: var(--accent-champagne); font-weight: normal;">(Actual)</span>' : ''}</span>
+            <span class="room-card-status ${isConnected ? 'is-connected' : 'is-waiting'}">
+              ${isConnected ? 'En juego' : 'Esperando pareja'}
+            </span>
+          </div>
+          <div class="room-card-details">
+            <span><strong>Cita:</strong> ${partnerName}</span>
+            <span>·</span>
+            <span><strong>Modo:</strong> ${modeLabel}</span>
+            <span>·</span>
+            <span>⏱ ${timeText}</span>
+          </div>
+          <div class="room-card-actions">
+            <button type="button" class="btn-flagship btn-switch-room" style="padding: 6px 14px; font-size: 0.8rem;">
+              ${isCurrent ? 'Continuar Partida' : 'Entrar a esta Sala'}
+            </button>
+            <button type="button" class="btn-ghost btn-copy-room-link" style="padding: 6px 12px; font-size: 0.8rem;" title="Copiar enlace de invitación">
+              Copiar Enlace
+            </button>
+            <button type="button" class="btn-ghost btn-close-room" style="padding: 6px 10px; font-size: 0.8rem; color: var(--text-secondary); margin-left: auto;" title="Cerrar sala y liberar espacio">
+              ✕ Cerrar
+            </button>
+          </div>
+        `;
+
+        // Bind Actions
+        const switchBtn = card.querySelector('.btn-switch-room');
+        switchBtn?.addEventListener('click', () => {
+          this.switchToRoom(room);
+        });
+
+        const copyBtn = card.querySelector('.btn-copy-room-link');
+        copyBtn?.addEventListener('click', () => {
+          const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${room.code}&key=${room.access_token}`;
+          navigator.clipboard.writeText(inviteUrl);
+          this.showToast(`Enlace de sala ${room.code} copiado`);
+        });
+
+        const closeBtn = card.querySelector('.btn-close-room');
+        closeBtn?.addEventListener('click', async () => {
+          await this.handleCloseRoom(room);
+        });
+
+        listEl.appendChild(card);
+      });
+    }
+
+    this.elements.activeRoomsModal?.classList.add('is-open');
+  }
+
+  closeActiveRoomsModal() {
+    this.elements.activeRoomsModal?.classList.remove('is-open');
+  }
+
+  async handleCloseRoom(room) {
+    const res = await closeGameRoom(room.code, room.host_token);
+    if (res.success) {
+      if (this.roomSession?.code === room.code) {
+        this.teardownRoomSession();
+        this.elements.gameScreen?.classList.add('is-hidden');
+        this.elements.roomWaitingScreen?.classList.add('is-hidden');
+        this.elements.changePlayersBtn?.classList.add('is-hidden');
+        this.elements.openCustomModalBtn?.classList.add('is-hidden');
+        this.elements.onboardingScreen?.classList.remove('is-hidden');
+      }
+      this.showToast(`Sala ${room.code} cerrada. Espacio liberado.`);
+      await this.openActiveRoomsModal();
+    } else {
+      this.showToast(res.error || 'No se pudo cerrar la sala');
+    }
+  }
+
+  switchToRoom(room) {
+    this.teardownRoomSession();
+    this.closeActiveRoomsModal();
+
+    const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${room.code}&key=${room.access_token}`;
+    this.roomSession = {
+      role: 'player_one',
+      code: room.code,
+      accessToken: room.access_token,
+      hostToken: room.host_token,
+      roomId: room.id,
+      inviteUrl,
+      mode: room.mode,
+      level: room.level,
+      p1Name: room.player_one_name,
+      p2Name: room.player_two_name
+    };
+
+    this.elements.onboardingScreen?.classList.add('is-hidden');
+
+    if (!room.player_two_joined) {
+      this.elements.gameScreen?.classList.add('is-hidden');
+      this.elements.roomWaitingScreen?.classList.remove('is-hidden');
+      if (this.elements.waitingRoomCode) {
+        this.elements.waitingRoomCode.textContent = room.code;
+      }
+      this.connectToRealtimeRoom(room.code);
+      this.showToast(`Cambiado a sala ${room.code} (esperando a tu cita)`);
+    } else {
+      this.state = createInitialGameState({
+        playerOne: room.player_one_name,
+        playerTwo: room.player_two_name || 'Invitado',
+        gameMode: room.mode,
+        initialLevel: room.level,
+        customCards: this.savedCustomCards
+      });
+
+      this.elements.roomWaitingScreen?.classList.add('is-hidden');
+      this.elements.gameScreen?.classList.remove('is-hidden');
+      this.elements.changePlayersBtn?.classList.remove('is-hidden');
+      this.elements.openCustomModalBtn?.classList.remove('is-hidden');
+
+      this.connectToRealtimeRoom(room.code);
+      this.syncTimerWithCurrentCard();
+      this.renderGameStage();
+      this.showToast(`Cambiado a sala ${room.code} con ${room.player_two_name}`);
+    }
+
+    window.history.replaceState({}, document.title, `${window.location.pathname}?room=${room.code}&key=${room.access_token}`);
   }
 
   /* ==========================================================================

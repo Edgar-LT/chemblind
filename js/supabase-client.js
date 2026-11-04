@@ -222,3 +222,48 @@ export async function updateRoomRecord(roomId, fields) {
     console.error('Error updating room in Supabase:', error);
   }
 }
+
+/**
+ * Fetches all currently active rooms created by this client device.
+ * @param {string} [clientId]
+ * @returns {Promise<Array<Object>>}
+ */
+export async function fetchClientActiveRooms(clientId) {
+  const supabase = getSupabase();
+  const cid = clientId || getDeviceId();
+
+  const { data, error } = await supabase.rpc('get_client_active_rooms', {
+    p_client_id: cid
+  });
+
+  if (error) {
+    console.error('Error fetching client active rooms:', error);
+    return [];
+  }
+
+  return Array.isArray(data) ? data : [];
+}
+
+/**
+ * Closes an active game room and frees up the slot.
+ * @param {string} code
+ * @param {string} hostToken
+ * @returns {Promise<{ success: boolean, message?: string, error?: string }>}
+ */
+export async function closeGameRoom(code, hostToken) {
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase.rpc('close_game_room', {
+    p_code: code,
+    p_host_token: hostToken
+  });
+
+  if (error) {
+    return {
+      success: false,
+      error: error.message || 'Error al cerrar la sala.'
+    };
+  }
+
+  return data || { success: true };
+}
