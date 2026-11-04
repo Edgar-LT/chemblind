@@ -24,7 +24,8 @@
 - **Sistema de Comodines & Química**: 2 comodines por jugador para saltar preguntas comprometidas y medidor porcentual de afinidad que responde a la sesión.
 - **Atelier de Cartas a Medida**: Permite redactar preguntas o retos propios con tiempo personalizado y guardado en `localStorage`.
 - **Integración con WhatsApp**: Botón para exportar y compartir la carta activa por mensaje con formato elegante.
-- **Infraestructura Supabase**: Proyecto vinculado en Supabase (`chemblind`) preparado para sincronización de salas en tiempo real mediante WebSockets.
+- **Infraestructura Supabase & Realtime**: Salas multijugador sincronizadas en tiempo real con WebSockets, enlaces protegidos con tokens de acceso, rate limiting de 30s y caducidad automática de 3 horas.
+- **Despliegue Público**: Alojado en producción en [https://edgar-lt.github.io/chemblind/](https://edgar-lt.github.io/chemblind/).
 
 ---
 
