@@ -395,6 +395,10 @@ class ChemBlindAppController {
         const roomData = await fetchRoomData(roomCode, accessToken);
         if (roomData) {
           this.pendingInvite = { roomCode, accessToken, roomData };
+          // Hide host room manager and banners for the guest
+          this.elements.viewRoomsBtn?.classList.add('is-hidden');
+          this.elements.activeRoomsBanner?.classList.add('is-hidden');
+
           if (this.elements.onboardingForm) {
             this.elements.onboardingForm.classList.add('is-hidden');
           }
@@ -540,6 +544,9 @@ class ChemBlindAppController {
       this.elements.gameScreen?.classList.remove('is-hidden');
       this.elements.changePlayersBtn?.classList.remove('is-hidden');
       this.elements.openCustomModalBtn?.classList.remove('is-hidden');
+      // Ensure active rooms manager remains hidden for the invited guest
+      this.elements.viewRoomsBtn?.classList.add('is-hidden');
+      this.elements.activeRoomsBanner?.classList.add('is-hidden');
 
       this.syncTimerWithCurrentCard();
       this.renderGameStage();
@@ -670,6 +677,13 @@ class ChemBlindAppController {
      ========================================================================== */
 
   async refreshActiveRooms() {
+    // If current session is an invited guest, never show host rooms manager
+    if (this.pendingInvite || this.roomSession?.role === 'player_two') {
+      this.elements.viewRoomsBtn?.classList.add('is-hidden');
+      this.elements.activeRoomsBanner?.classList.add('is-hidden');
+      return;
+    }
+
     try {
       this.activeRoomsList = await fetchClientActiveRooms();
       const count = this.activeRoomsList.length;
@@ -697,6 +711,9 @@ class ChemBlindAppController {
   }
 
   async openActiveRoomsModal() {
+    if (this.pendingInvite || this.roomSession?.role === 'player_two') {
+      return;
+    }
     await this.refreshActiveRooms();
     const listEl = this.elements.activeRoomsList;
     if (!listEl) return;
