@@ -28,11 +28,14 @@ import {
   broadcastRoomEvent,
   updateRoomRecord,
   fetchClientActiveRooms,
-  closeGameRoom
+  closeGameRoom,
+  getDeviceId
 } from './supabase-client.js';
 
 const STORAGE_KEY_CUSTOM_CARDS = 'chemblind_custom_cards_v1';
 const STORAGE_KEY_THEME = 'chemblind_theme_v1';
+const STORAGE_KEY_LAST_GUEST_NAME = 'chemblind_last_guest_name_v1';
+const getGuestSessionKey = (code) => `chemblind_guest_session_${code}`;
 
 class ChemBlindAppController {
   constructor() {
@@ -391,34 +394,201 @@ class ChemBlindAppController {
       const roomCode = params.get('room');
       const accessToken = params.get('key');
 
-      if (roomCode && accessToken) {
-        const roomData = await fetchRoomData(roomCode, accessToken);
-        if (roomData) {
-          this.pendingInvite = { roomCode, accessToken, roomData };
-          // Hide host room manager and banners for the guest
-          this.elements.viewRoomsBtn?.classList.add('is-hidden');
-          this.elements.activeRoomsBanner?.classList.add('is-hidden');
+      if (!roomCode || !accessToken) return;
 
-          if (this.elements.onboardingForm) {
-            this.elements.onboardingForm.classList.add('is-hidden');
-          }
-          if (this.elements.guestJoinForm) {
-            this.elements.guestJoinForm.classList.remove('is-hidden');
-          }
-          if (this.elements.guestInviteRoomCode) {
-            this.elements.guestInviteRoomCode.textContent = `SALA ${roomData.code}`;
-          }
-          if (this.elements.guestInviteDetails) {
-            const modeName = roomData.mode === 'online' ? 'Online (A distancia)' : 'Presencial';
-            this.elements.guestInviteDetails.textContent = `${roomData.player_one_name} te ha invitado a jugar en Modo ${modeName}.`;
-          }
-          if (this.elements.onboardingSubtitle) {
-            this.elements.onboardingSubtitle.textContent = `Invitación recibida de ${roomData.player_one_name}.`;
-          }
-        }
+      const roomData = await fetchRoomData(roomCode, accessToken);
+      if (!roomData) {
+        this.showToast('Esta sala ha expirado o el enlace no es válido.');
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
       }
+
+      const currentClientId = getDeviceId();
+      const isHostDevice = roomData.creator_client_id === currentClientId;
+
+      if (isHostDevice) {
+        this.resumeHostSession(roomData, accessToken);
+        return;
+      }
+
+      this.handleGuestInvitation(roomData, accessToken);
     } catch (err) {
-      console.warn('No invite params found in URL:', err);
+      console.warn('Error verifying room invitation:', err);
+    }
+  }
+
+  resumeHostSession(roomData, accessToken) {
+    const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${roomData.code}&key=${accessToken}`;
+    this.roomSession = {
+      role: 'player_one',
+      code: roomData.code,
+      accessToken,
+      hostToken: roomData.host_token,
+      roomId: roomData.id,
+      inviteUrl,
+      mode: roomData.mode,
+      level: roomData.level || 1,
+      p1Name: roomData.player_one_name,
+      p2Name: roomData.player_two_name
+    };
+
+    this.elements.onboardingScreen?.classList.add('is-hidden');
+
+    if (!roomData.player_two_joined) {
+      this.elements.gameScreen?.classList.add('is-hidden');
+      this.elements.roomWaitingScreen?.classList.remove('is-hidden');
+      if (this.elements.waitingRoomCode) {
+        this.elements.waitingRoomCode.textContent = roomData.code;
+      }
+      this.connectToRealtimeRoom(roomData.code);
+      this.showToast(`Sala ${roomData.code} activa. Esperando a tu cita.`);
+    } else {
+      const p2Name = roomData.player_two_name || 'Invitado';
+      this.hydrateAndStartGame(roomData, p2Name);
+      this.elements.roomWaitingScreen?.classList.add('is-hidden');
+      this.elements.gameScreen?.classList.remove('is-hidden');
+      this.elements.changePlayersBtn?.classList.remove('is-hidden');
+      this.elements.openCustomModalBtn?.classList.remove('is-hidden');
+
+      this.connectToRealtimeRoom(roomData.code);
+      this.syncTimerWithCurrentCard();
+      this.renderGameStage();
+      this.showToast(`Reconectado a sala ${roomData.code} con ${p2Name}`);
+    }
+
+    this.refreshActiveRooms();
+  }
+
+  handleGuestInvitation(roomData, accessToken) {
+    this.pendingInvite = { roomCode: roomData.code, accessToken, roomData };
+
+    // Hide host controls for guests
+    this.elements.viewRoomsBtn?.classList.add('is-hidden');
+    this.elements.activeRoomsBanner?.classList.add('is-hidden');
+
+    // Retrieve saved guest session if present
+    const sessionKey = getGuestSessionKey(roomData.code);
+    let savedGuestName = '';
+    try {
+      const rawSession = localStorage.getItem(sessionKey);
+      if (rawSession) {
+        const parsed = JSON.parse(rawSession);
+        savedGuestName = parsed.name || '';
+      }
+    } catch (e) {
+      console.warn('Could not read guest session', e);
+    }
+
+    if (!savedGuestName) {
+      savedGuestName = localStorage.getItem(STORAGE_KEY_LAST_GUEST_NAME) || '';
+    }
+
+    // Direct entry if game is in progress and name is stored/known
+    const alreadyJoined = roomData.player_two_joined;
+    const hasNameMemory = Boolean(savedGuestName);
+
+    if (alreadyJoined && (hasNameMemory || roomData.player_two_name)) {
+      const guestName = savedGuestName || roomData.player_two_name || 'Invitado';
+      this.resumeGuestSession(roomData, accessToken, guestName);
+      return;
+    }
+
+    // Otherwise, show the guest join form to input their name
+    if (this.elements.onboardingForm) {
+      this.elements.onboardingForm.classList.add('is-hidden');
+    }
+    if (this.elements.guestJoinForm) {
+      this.elements.guestJoinForm.classList.remove('is-hidden');
+    }
+    if (this.elements.guestInviteRoomCode) {
+      this.elements.guestInviteRoomCode.textContent = `SALA ${roomData.code}`;
+    }
+    if (this.elements.guestInviteDetails) {
+      const modeName = roomData.mode === 'online' ? 'Online (A distancia)' : 'Presencial';
+      this.elements.guestInviteDetails.textContent = `${roomData.player_one_name} te ha invitado a jugar en Modo ${modeName}.`;
+    }
+    if (this.elements.onboardingSubtitle) {
+      this.elements.onboardingSubtitle.textContent = `Invitación recibida de ${roomData.player_one_name}.`;
+    }
+    if (this.elements.guestNameInput && savedGuestName) {
+      this.elements.guestNameInput.value = savedGuestName;
+    }
+  }
+
+  resumeGuestSession(roomData, accessToken, guestName) {
+    try {
+      localStorage.setItem(
+        getGuestSessionKey(roomData.code),
+        JSON.stringify({ name: guestName, accessToken })
+      );
+      localStorage.setItem(STORAGE_KEY_LAST_GUEST_NAME, guestName);
+    } catch (e) {
+      console.warn('Could not persist guest session', e);
+    }
+
+    this.roomSession = {
+      role: 'player_two',
+      code: roomData.code,
+      accessToken,
+      roomId: roomData.id,
+      mode: roomData.mode,
+      level: roomData.level || 1,
+      p1Name: roomData.player_one_name,
+      p2Name: guestName
+    };
+
+    this.hydrateAndStartGame(roomData, guestName);
+
+    // Connect Realtime Channel
+    this.connectToRealtimeRoom(roomData.code);
+
+    // Notify host that player 2 has joined/reconnected
+    broadcastRoomEvent(this.roomSession.channel, 'PLAYER_JOINED', {
+      playerTwoName: guestName
+    });
+
+    // Direct transition to game screen
+    this.elements.onboardingScreen?.classList.add('is-hidden');
+    this.elements.roomWaitingScreen?.classList.add('is-hidden');
+    this.elements.guestJoinForm?.classList.add('is-hidden');
+    this.elements.gameScreen?.classList.remove('is-hidden');
+    this.elements.changePlayersBtn?.classList.remove('is-hidden');
+    this.elements.openCustomModalBtn?.classList.remove('is-hidden');
+    this.elements.viewRoomsBtn?.classList.add('is-hidden');
+    this.elements.activeRoomsBanner?.classList.add('is-hidden');
+
+    this.syncTimerWithCurrentCard();
+    this.renderGameStage();
+    this.showToast(`Reconectado a la sala con ${roomData.player_one_name}`);
+  }
+
+  hydrateAndStartGame(roomData, guestName) {
+    this.state = createInitialGameState({
+      playerOne: roomData.player_one_name,
+      playerTwo: guestName,
+      gameMode: roomData.mode,
+      initialLevel: roomData.level || 1,
+      customCards: this.savedCustomCards
+    });
+
+    if (roomData.current_card_id) {
+      const allCards = [...this.savedCustomCards, ...DEFAULT_CARDS];
+      const foundCard = allCards.find((c) => c.id === roomData.current_card_id);
+      if (foundCard) {
+        this.state.currentCard = foundCard;
+      }
+    }
+
+    if (typeof roomData.active_turn === 'number' && roomData.active_turn >= 1) {
+      this.state.activePlayerIndex = roomData.active_turn - 1;
+    }
+
+    if (typeof roomData.chemistry_score === 'number') {
+      this.state.chemistryScore = clampNumber(roomData.chemistry_score, 0, 100);
+    }
+
+    if (roomData.level) {
+      this.state.currentLevel = roomData.level;
     }
   }
 
@@ -511,6 +681,20 @@ class ChemBlindAppController {
         return;
       }
 
+      // Save guest session memory to localStorage
+      try {
+        localStorage.setItem(
+          getGuestSessionKey(joinResult.code),
+          JSON.stringify({
+            name: guestName,
+            accessToken: this.pendingInvite.accessToken
+          })
+        );
+        localStorage.setItem(STORAGE_KEY_LAST_GUEST_NAME, guestName);
+      } catch (e) {
+        console.warn('Could not save guest session to localStorage', e);
+      }
+
       this.roomSession = {
         role: 'player_two',
         code: joinResult.code,
@@ -571,22 +755,27 @@ class ChemBlindAppController {
           const p2Name = payload.playerTwoName || 'Tu pareja';
           this.roomSession.p2Name = p2Name;
 
-          this.state = createInitialGameState({
-            playerOne: this.roomSession.p1Name,
-            playerTwo: p2Name,
-            gameMode: this.roomSession.mode,
-            initialLevel: this.roomSession.level,
-            customCards: this.savedCustomCards
-          });
+          if (!this.state) {
+            this.state = createInitialGameState({
+              playerOne: this.roomSession.p1Name,
+              playerTwo: p2Name,
+              gameMode: this.roomSession.mode,
+              initialLevel: this.roomSession.level,
+              customCards: this.savedCustomCards
+            });
 
-          this.elements.roomWaitingScreen?.classList.add('is-hidden');
-          this.elements.gameScreen?.classList.remove('is-hidden');
-          this.elements.changePlayersBtn?.classList.remove('is-hidden');
-          this.elements.openCustomModalBtn?.classList.remove('is-hidden');
+            this.elements.roomWaitingScreen?.classList.add('is-hidden');
+            this.elements.gameScreen?.classList.remove('is-hidden');
+            this.elements.changePlayersBtn?.classList.remove('is-hidden');
+            this.elements.openCustomModalBtn?.classList.remove('is-hidden');
 
-          this.syncTimerWithCurrentCard();
-          this.renderGameStage();
-          this.showToast(`¡${p2Name} se ha conectado a la sala!`);
+            this.syncTimerWithCurrentCard();
+            this.renderGameStage();
+            this.showToast(`¡${p2Name} se ha conectado a la sala!`);
+          } else {
+            this.showToast(`¡${p2Name} se ha reconectado a la sala!`);
+            this.syncRoomState('SYNC_REFRESH');
+          }
         }
       },
       onCardAction: (payload) => {
@@ -597,19 +786,15 @@ class ChemBlindAppController {
         if (this.roomSession?.role === 'player_one' && newRecord.player_two_joined && !this.roomSession.p2Name) {
           const p2Name = newRecord.player_two_name || 'Invitado';
           this.roomSession.p2Name = p2Name;
-          this.state = createInitialGameState({
-            playerOne: this.roomSession.p1Name,
-            playerTwo: p2Name,
-            gameMode: this.roomSession.mode,
-            initialLevel: this.roomSession.level,
-            customCards: this.savedCustomCards
-          });
-          this.elements.roomWaitingScreen?.classList.add('is-hidden');
-          this.elements.gameScreen?.classList.remove('is-hidden');
-          this.elements.changePlayersBtn?.classList.remove('is-hidden');
-          this.elements.openCustomModalBtn?.classList.remove('is-hidden');
-          this.syncTimerWithCurrentCard();
-          this.renderGameStage();
+          if (!this.state) {
+            this.hydrateAndStartGame(newRecord, p2Name);
+            this.elements.roomWaitingScreen?.classList.add('is-hidden');
+            this.elements.gameScreen?.classList.remove('is-hidden');
+            this.elements.changePlayersBtn?.classList.remove('is-hidden');
+            this.elements.openCustomModalBtn?.classList.remove('is-hidden');
+            this.syncTimerWithCurrentCard();
+            this.renderGameStage();
+          }
         }
       }
     });
@@ -843,13 +1028,8 @@ class ChemBlindAppController {
       this.connectToRealtimeRoom(room.code);
       this.showToast(`Cambiado a sala ${room.code} (esperando a tu cita)`);
     } else {
-      this.state = createInitialGameState({
-        playerOne: room.player_one_name,
-        playerTwo: room.player_two_name || 'Invitado',
-        gameMode: room.mode,
-        initialLevel: room.level,
-        customCards: this.savedCustomCards
-      });
+      const p2Name = room.player_two_name || 'Invitado';
+      this.hydrateAndStartGame(room, p2Name);
 
       this.elements.roomWaitingScreen?.classList.add('is-hidden');
       this.elements.gameScreen?.classList.remove('is-hidden');
@@ -859,7 +1039,7 @@ class ChemBlindAppController {
       this.connectToRealtimeRoom(room.code);
       this.syncTimerWithCurrentCard();
       this.renderGameStage();
-      this.showToast(`Cambiado a sala ${room.code} con ${room.player_two_name}`);
+      this.showToast(`Cambiado a sala ${room.code} con ${p2Name}`);
     }
 
     window.history.replaceState({}, document.title, `${window.location.pathname}?room=${room.code}&key=${room.access_token}`);
