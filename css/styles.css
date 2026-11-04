@@ -40,27 +40,254 @@
   --shadow-stage: 0 32px 64px -16px rgba(0, 0, 0, 0.65);
 }
 
-/* Variante Modo Claro Editorial (Alabaster & Ivory) */
+/* Variante Modo Claro Editorial (Porcelain Alabaster, Warm Bronze Gold & Obsidian Ink) */
 [data-theme="light"] {
-  --bg-canvas: #f5f5f7;
+  /* Lienzo y Superficies */
+  --bg-canvas: #f2f2f5;
   --bg-elevated: #ffffff;
-  --bg-elevated-hover: #fafafa;
-  --bg-subtle: #ebebf0;
-  --bg-glass: rgba(255, 255, 255, 0.82);
+  --bg-elevated-hover: #fbfbfd;
+  --bg-subtle: #f8f8fa;
+  --bg-glass: rgba(242, 242, 245, 0.88);
 
-  --text-primary: #1d1d1f;
-  --text-secondary: #6e6e73;
-  --text-muted: #98989d;
+  /* Jerarquía Tipográfica con Contraste Confortable (Cero fatiga visual) */
+  --text-primary: #111215;
+  --text-secondary: #52545d;
+  --text-muted: #7c7e8a;
 
-  --border-hairline: rgba(0, 0, 0, 0.08);
-  --border-specular: rgba(255, 255, 255, 0.95);
-  --border-gold: rgba(158, 123, 59, 0.35);
+  /* Bordes Nítidos y Estructurados */
+  --border-hairline: rgba(17, 18, 21, 0.09);
+  --border-specular: rgba(17, 18, 21, 0.06);
+  --border-gold: rgba(143, 97, 32, 0.32);
 
-  --accent-champagne: #9e7b3b;
-  --accent-champagne-light: #7c5e26;
-  --accent-champagne-soft: rgba(158, 123, 59, 0.1);
+  /* Acentos Oro Champán / Bronce Cálido de Alta Relojería (Rico, nítido y legible) */
+  --accent-champagne: #8f6120;
+  --accent-champagne-light: #6a4613;
+  --accent-champagne-soft: rgba(143, 97, 32, 0.08);
+  --accent-chrono-orange: #d13d26;
 
-  --shadow-stage: 0 24px 50px -12px rgba(0, 0, 0, 0.08);
+  /* Sombra de Escenario con Profundidad Multicapa Suave */
+  --shadow-stage: 0 4px 16px rgba(17, 18, 21, 0.04), 0 24px 56px -12px rgba(17, 18, 21, 0.09);
+}
+
+/* ==========================================================================
+   Refinamiento Específico Modo Claro (Armonía, Contraste & Tacto Editorial)
+   ========================================================================== */
+
+[data-theme="light"] body {
+  background-color: var(--bg-canvas);
+  background-image:
+    radial-gradient(circle at 50% -12%, rgba(143, 97, 32, 0.05) 0%, transparent 60%);
+}
+
+[data-theme="light"] .frosted-nav {
+  background: var(--bg-glass);
+  border-bottom: 1px solid rgba(17, 18, 21, 0.08);
+}
+
+[data-theme="light"] .brand-emblem {
+  background: rgba(143, 97, 32, 0.09);
+  border-color: rgba(143, 97, 32, 0.35);
+  color: var(--accent-champagne);
+}
+
+/* Tarjetas Principales: Alabastro & Bisel Dorado Cálido */
+[data-theme="light"] .onboarding-card {
+  background: var(--bg-elevated);
+  border: 1px solid rgba(17, 18, 21, 0.1);
+  border-top: 1px solid rgba(143, 97, 32, 0.38);
+  box-shadow: 0 2px 8px rgba(17, 18, 21, 0.03), 0 24px 50px -12px rgba(17, 18, 21, 0.08);
+}
+
+[data-theme="light"] .playing-card {
+  background:
+    linear-gradient(175deg, #ffffff 0%, #faf9f6 100%);
+  border: 1px solid rgba(143, 97, 32, 0.38);
+  border-top: 1px solid rgba(143, 97, 32, 0.55);
+  box-shadow: 0 4px 16px rgba(17, 18, 21, 0.04), 0 28px 60px -14px rgba(17, 18, 21, 0.09);
+}
+
+/* Opciones de Configuración (Modo y Nivel): Claridad sin confusión de blancos */
+[data-theme="light"] .setup-mode-box,
+[data-theme="light"] .setup-level-box {
+  background: #ffffff;
+  border: 1px solid rgba(17, 18, 21, 0.11);
+  box-shadow: 0 1px 3px rgba(17, 18, 21, 0.02);
+}
+
+[data-theme="light"] .setup-mode-box:hover,
+[data-theme="light"] .setup-level-box:hover {
+  border-color: rgba(143, 97, 32, 0.38);
+  background: #fdfdfd;
+}
+
+[data-theme="light"] .setup-mode-option input:checked + .setup-mode-box,
+[data-theme="light"] .setup-level-option input:checked + .setup-level-box {
+  background: rgba(143, 97, 32, 0.08);
+  border-color: var(--accent-champagne);
+  box-shadow: 0 2px 8px rgba(143, 97, 32, 0.1);
+}
+
+[data-theme="light"] .setup-mode-option input:checked + .setup-mode-box .mode-name,
+[data-theme="light"] .setup-mode-option input:checked + .setup-mode-box .mode-tag {
+  color: var(--accent-champagne);
+  border-color: rgba(143, 97, 32, 0.4);
+}
+
+/* Campos de Texto y Selectores */
+[data-theme="light"] .luxury-input,
+[data-theme="light"] .luxury-select,
+[data-theme="light"] .luxury-textarea {
+  background: #ffffff;
+  border: 1px solid rgba(17, 18, 21, 0.14);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(17, 18, 21, 0.02) inset;
+}
+
+[data-theme="light"] .luxury-input:focus,
+[data-theme="light"] .luxury-select:focus,
+[data-theme="light"] .luxury-textarea:focus {
+  border-color: var(--accent-champagne);
+  box-shadow: 0 0 0 3px rgba(143, 97, 32, 0.12);
+  background: #ffffff;
+}
+
+[data-theme="light"] .luxury-input::placeholder,
+[data-theme="light"] .luxury-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Píldoras y Controles de Navegación */
+[data-theme="light"] .players-pill,
+[data-theme="light"] .icon-btn {
+  background: #ffffff;
+  border: 1px solid rgba(17, 18, 21, 0.11);
+  color: var(--text-secondary);
+  box-shadow: 0 1px 3px rgba(17, 18, 21, 0.02);
+}
+
+[data-theme="light"] .players-pill:hover,
+[data-theme="light"] .icon-btn:hover {
+  background: #fafafc;
+  border-color: rgba(143, 97, 32, 0.4);
+  color: var(--text-primary);
+}
+
+/* Pestañas de Nivel y Química en Juego */
+[data-theme="light"] .level-selector,
+[data-theme="light"] .chemistry-pill {
+  background: #ffffff;
+  border: 1px solid rgba(17, 18, 21, 0.11);
+  box-shadow: 0 1px 3px rgba(17, 18, 21, 0.02);
+}
+
+[data-theme="light"] .level-tab {
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .level-tab:hover {
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .level-tab.active {
+  background: rgba(143, 97, 32, 0.09);
+  color: var(--text-primary);
+  border: 1px solid rgba(143, 97, 32, 0.45);
+}
+
+[data-theme="light"] .chemistry-mini-track {
+  background: rgba(17, 18, 21, 0.08);
+}
+
+[data-theme="light"] .turn-badge {
+  background: rgba(143, 97, 32, 0.09);
+  color: var(--accent-champagne);
+  border: 1px solid rgba(143, 97, 32, 0.32);
+}
+
+/* Cronómetro en Modo Claro */
+[data-theme="light"] .inline-timer-box {
+  background: #ffffff;
+  border: 1px solid rgba(143, 97, 32, 0.38);
+  box-shadow: 0 2px 8px rgba(143, 97, 32, 0.08);
+}
+
+[data-theme="light"] .btn-timer-action {
+  background: var(--accent-champagne);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(143, 97, 32, 0.22);
+}
+
+[data-theme="light"] .btn-timer-action:hover {
+  background: var(--accent-champagne-light);
+}
+
+/* Botones con Contraste Confortable */
+[data-theme="light"] .btn-flagship {
+  background: #111215;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(17, 18, 21, 0.14);
+}
+
+[data-theme="light"] .btn-flagship:hover {
+  background: #25262c;
+  box-shadow: 0 4px 14px rgba(17, 18, 21, 0.2);
+}
+
+[data-theme="light"] .btn-ghost {
+  background: #ffffff;
+  border: 1px solid rgba(17, 18, 21, 0.12);
+  color: var(--text-secondary);
+  box-shadow: 0 1px 3px rgba(17, 18, 21, 0.02);
+}
+
+[data-theme="light"] .btn-ghost:hover:not(:disabled) {
+  border-color: rgba(143, 97, 32, 0.45);
+  color: var(--text-primary);
+  background: #fafafc;
+}
+
+/* Modales, Toasts y Banners de Sala */
+[data-theme="light"] .modal-backdrop {
+  background: rgba(17, 18, 21, 0.38);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+[data-theme="light"] .modal-dialog {
+  background: #ffffff;
+  border: 1px solid rgba(143, 97, 32, 0.35);
+  box-shadow: 0 12px 48px -12px rgba(17, 18, 21, 0.18);
+}
+
+[data-theme="light"] .toast-notification {
+  background: #111215;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+
+[data-theme="light"] .room-share-box,
+[data-theme="light"] .active-rooms-banner,
+[data-theme="light"] .active-room-card {
+  background: #ffffff;
+  border: 1px solid rgba(17, 18, 21, 0.11);
+  box-shadow: 0 2px 8px rgba(17, 18, 21, 0.03);
+}
+
+[data-theme="light"] .active-room-card:hover {
+  border-color: rgba(143, 97, 32, 0.45);
+}
+
+[data-theme="light"] .room-card-status.is-waiting {
+  background: #f4f4f7;
+  border-color: rgba(17, 18, 21, 0.1);
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .room-card-status.is-connected {
+  background: rgba(143, 97, 32, 0.09);
+  color: var(--accent-champagne);
+  border-color: rgba(143, 97, 32, 0.35);
 }
 
 /* ==========================================================================
