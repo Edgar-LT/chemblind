@@ -47,8 +47,14 @@ juego-conexion/
 ├── css/
 │   └── styles.css      # Tokens cromáticos, física horológica y responsividad
 ├── js/
-│   ├── engine.js       # Capa de dominio pura (lógica, mazos, barajado inmutable)
-│   └── app.js          # Controlador UI, sincronización DOM y cronógrafo
+│   ├── constants.js    # Metadatos, niveles de intensidad y enums del juego
+│   ├── data/
+│   │   └── cards.js    # Dataset curado de 165 tarjetas desacoplado de la lógica
+│   ├── engine.js       # Capa de dominio pura (máquina de estados, barajado inmutable)
+│   ├── app.js          # Controlador UI, sincronización DOM y cronógrafo a 60 Hz
+│   └── supabase-client.js # Sincronización Realtime con fallback offline y rate limiting
+├── tests/
+│   └── verify_engine.py # Suite de verificación de integridad de mazo y turnos
 └── README.md           # Documentación técnica
 ```
 

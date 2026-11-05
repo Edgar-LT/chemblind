@@ -2,6 +2,7 @@
  * @file supabase-client.js
  * @description Supabase client integration for ChemBlind real-time multiplayer rooms.
  * Manages device fingerprinting, room creation with rate limits, invitations, and Realtime channels.
+ * Incluye salvaguardas para modo offline y degradación elegante si la red o el SDK no están disponibles.
  */
 
 // Supabase project credentials (vdwdqniekhxisewuffnc)
@@ -15,21 +16,33 @@ const STORAGE_KEY_HOST_SESSION = 'chemblind_host_session_v1';
 let supabaseClient = null;
 
 /**
+ * Comprueba si el SDK de Supabase está cargado y disponible en el navegador.
+ * @returns {boolean}
+ */
+export function isSupabaseAvailable() {
+  return typeof window !== 'undefined' && Boolean(window.supabase && window.supabase.createClient);
+}
+
+/**
  * Initializes and returns the singleton Supabase client.
  */
 export function getSupabase() {
   if (supabaseClient) return supabaseClient;
-  if (typeof window !== 'undefined' && window.supabase && window.supabase.createClient) {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      realtime: {
-        params: {
-          eventsPerSecond: 10
+  if (isSupabaseAvailable()) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        realtime: {
+          params: {
+            eventsPerSecond: 10
+          }
         }
-      }
-    });
-    return supabaseClient;
+      });
+      return supabaseClient;
+    } catch (err) {
+      console.warn('[ChemBlind/Supabase] Error al instanciar cliente Supabase:', err);
+    }
   }
-  throw new Error('Supabase SDK not loaded on window.');
+  return null;
 }
 
 /**
@@ -55,49 +68,65 @@ export function getDeviceId() {
  * @param {string} params.playerName
  * @param {string} params.mode - 'presencial' | 'online'
  * @param {number} params.level - 1, 2, 3
- * @returns {Promise<{ success: boolean, code?: string, accessToken?: string, hostToken?: string, error?: string }>}
+ * @returns {Promise<{ success: boolean, code?: string, accessToken?: string, hostToken?: string, error?: string, offline?: boolean }>}
  */
 export async function createGameRoom({ playerName, mode, level }) {
   const supabase = getSupabase();
-  const clientId = getDeviceId();
-
-  const { data, error } = await supabase.rpc('create_game_room', {
-    p_client_id: clientId,
-    p_player_name: playerName,
-    p_mode: mode || 'online',
-    p_level: Number(level) || 1
-  });
-
-  if (error) {
+  if (!supabase) {
     return {
       success: false,
-      error: error.message || 'No se pudo crear la sala. Intenta de nuevo en unos segundos.'
+      offline: true,
+      error: 'El servicio multijugador no está disponible en este momento. Puedes seguir jugando en modo local en el mismo dispositivo.'
     };
   }
 
-  const result = data || {};
-  if (result.success && result.host_token) {
-    try {
-      localStorage.setItem(
-        STORAGE_KEY_HOST_SESSION,
-        JSON.stringify({
-          code: result.code,
-          hostToken: result.host_token,
-          roomId: result.room_id
-        })
-      );
-    } catch (e) {
-      console.warn('Could not persist host token locally', e);
-    }
-  }
+  const clientId = getDeviceId();
 
-  return {
-    success: true,
-    code: result.code,
-    accessToken: result.access_token,
-    hostToken: result.host_token,
-    roomId: result.room_id
-  };
+  try {
+    const { data, error } = await supabase.rpc('create_game_room', {
+      p_client_id: clientId,
+      p_player_name: playerName,
+      p_mode: mode || 'online',
+      p_level: Number(level) || 1
+    });
+
+    if (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo crear la sala. Intenta de nuevo en unos segundos.'
+      };
+    }
+
+    const result = data || {};
+    if (result.success && result.host_token) {
+      try {
+        localStorage.setItem(
+          STORAGE_KEY_HOST_SESSION,
+          JSON.stringify({
+            code: result.code,
+            hostToken: result.host_token,
+            roomId: result.room_id
+          })
+        );
+      } catch (e) {
+        console.warn('[ChemBlind/Supabase] No se pudo persistir host token localmente', e);
+      }
+    }
+
+    return {
+      success: true,
+      code: result.code,
+      accessToken: result.access_token,
+      hostToken: result.host_token,
+      roomId: result.room_id
+    };
+  } catch (networkError) {
+    return {
+      success: false,
+      offline: true,
+      error: 'Error de conexión de red con el servidor multijugador.'
+    };
+  }
 }
 
 /**
@@ -110,21 +139,35 @@ export async function createGameRoom({ playerName, mode, level }) {
  */
 export async function joinGameRoom({ code, accessToken, playerName }) {
   const supabase = getSupabase();
-
-  const { data, error } = await supabase.rpc('join_game_room', {
-    p_code: code,
-    p_access_token: accessToken,
-    p_player_two_name: playerName
-  });
-
-  if (error) {
+  if (!supabase) {
     return {
       success: false,
-      error: error.message || 'Error al intentar unirse a la sala.'
+      offline: true,
+      error: 'El servicio multijugador no está disponible.'
     };
   }
 
-  return data;
+  try {
+    const { data, error } = await supabase.rpc('join_game_room', {
+      p_code: code,
+      p_access_token: accessToken,
+      p_player_two_name: playerName
+    });
+
+    if (error) {
+      return {
+        success: false,
+        error: error.message || 'Error al intentar unirse a la sala.'
+      };
+    }
+
+    return data;
+  } catch (networkError) {
+    return {
+      success: false,
+      error: 'Error de comunicación con la sala remota.'
+    };
+  }
 }
 
 /**
@@ -135,16 +178,22 @@ export async function joinGameRoom({ code, accessToken, playerName }) {
  */
 export async function fetchRoomData(code, accessToken) {
   const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from('rooms')
-    .select('*')
-    .eq('code', code)
-    .eq('access_token', accessToken)
-    .gt('expires_at', new Date().toISOString())
-    .maybeSingle();
+  if (!supabase) return null;
 
-  if (error || !data) return null;
-  return data;
+  try {
+    const { data, error } = await supabase
+      .from('rooms')
+      .select('*')
+      .eq('code', code)
+      .eq('access_token', accessToken)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return data;
+  } catch (err) {
+    return null;
+  }
 }
 
 /**
@@ -154,41 +203,44 @@ export async function fetchRoomData(code, accessToken) {
  * @param {Function} handlers.onStateUpdate
  * @param {Function} handlers.onPlayerJoined
  * @param {Function} handlers.onCardAction
- * @returns {Object} Realtime Channel instance
+ * @returns {Object|null} Realtime Channel instance
  */
 export function subscribeToRoomChannel(roomCode, { onStateUpdate, onPlayerJoined, onCardAction }) {
   const supabase = getSupabase();
-  const channelName = `chemblind:${roomCode}`;
+  if (!supabase) return null;
 
-  const channel = supabase
-    .channel(channelName)
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'rooms',
-        filter: `code=eq.${roomCode}`
-      },
-      (payload) => {
-        if (onStateUpdate && payload.new) {
-          onStateUpdate(payload.new);
+  try {
+    const channelName = `chemblind:${roomCode}`;
+
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'rooms',
+          filter: `code=eq.${roomCode}`
+        },
+        (payload) => {
+          if (onStateUpdate && payload.new) {
+            onStateUpdate(payload.new);
+          }
         }
-      }
-    )
-    .on('broadcast', { event: 'PLAYER_JOINED' }, (payload) => {
-      if (onPlayerJoined) onPlayerJoined(payload.payload);
-    })
-    .on('broadcast', { event: 'CARD_ACTION' }, (payload) => {
-      if (onCardAction) onCardAction(payload.payload);
-    })
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        // Channel connected
-      }
-    });
+      )
+      .on('broadcast', { event: 'PLAYER_JOINED' }, (payload) => {
+        if (onPlayerJoined) onPlayerJoined(payload.payload);
+      })
+      .on('broadcast', { event: 'CARD_ACTION' }, (payload) => {
+        if (onCardAction) onCardAction(payload.payload);
+      })
+      .subscribe();
 
-  return channel;
+    return channel;
+  } catch (err) {
+    console.warn('[ChemBlind/Supabase] Error suscribiendo a canal Realtime:', err);
+    return null;
+  }
 }
 
 /**
@@ -198,28 +250,44 @@ export function subscribeToRoomChannel(roomCode, { onStateUpdate, onPlayerJoined
  * @param {Object} payload
  */
 export async function broadcastRoomEvent(channel, event, payload) {
-  if (!channel) return;
-  await channel.send({
-    type: 'broadcast',
-    event,
-    payload
-  });
+  if (!channel || typeof channel.send !== 'function') return;
+  try {
+    await channel.send({
+      type: 'broadcast',
+      event,
+      payload
+    });
+  } catch (err) {
+    console.warn('[ChemBlind/Supabase] Error en broadcast:', err);
+  }
 }
 
 /**
- * Updates room row in Supabase.
+ * Updates room row in Supabase with host verification.
  * @param {string} roomId
  * @param {Object} fields
+ * @param {string} [hostToken]
  */
-export async function updateRoomRecord(roomId, fields) {
+export async function updateRoomRecord(roomId, fields, hostToken = null) {
   const supabase = getSupabase();
-  const { error } = await supabase
-    .from('rooms')
-    .update({ ...fields, updated_at: new Date().toISOString() })
-    .eq('id', roomId);
+  if (!supabase) return;
 
-  if (error) {
-    console.error('Error updating room in Supabase:', error);
+  try {
+    let query = supabase
+      .from('rooms')
+      .update({ ...fields, updated_at: new Date().toISOString() })
+      .eq('id', roomId);
+
+    if (hostToken) {
+      query = query.eq('host_token', hostToken);
+    }
+
+    const { error } = await query;
+    if (error) {
+      console.warn('[ChemBlind/Supabase] Advertencia al actualizar sala:', error.message);
+    }
+  } catch (err) {
+    console.warn('[ChemBlind/Supabase] Error en updateRoomRecord:', err);
   }
 }
 
@@ -230,18 +298,24 @@ export async function updateRoomRecord(roomId, fields) {
  */
 export async function fetchClientActiveRooms(clientId) {
   const supabase = getSupabase();
+  if (!supabase) return [];
+
   const cid = clientId || getDeviceId();
 
-  const { data, error } = await supabase.rpc('get_client_active_rooms', {
-    p_client_id: cid
-  });
+  try {
+    const { data, error } = await supabase.rpc('get_client_active_rooms', {
+      p_client_id: cid
+    });
 
-  if (error) {
-    console.error('Error fetching client active rooms:', error);
+    if (error) {
+      console.warn('[ChemBlind/Supabase] Error al consultar salas activas:', error.message);
+      return [];
+    }
+
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
     return [];
   }
-
-  return Array.isArray(data) ? data : [];
 }
 
 /**
@@ -252,18 +326,25 @@ export async function fetchClientActiveRooms(clientId) {
  */
 export async function closeGameRoom(code, hostToken) {
   const supabase = getSupabase();
-
-  const { data, error } = await supabase.rpc('close_game_room', {
-    p_code: code,
-    p_host_token: hostToken
-  });
-
-  if (error) {
-    return {
-      success: false,
-      error: error.message || 'Error al cerrar la sala.'
-    };
+  if (!supabase) {
+    return { success: false, error: 'Servicio no disponible' };
   }
 
-  return data || { success: true };
+  try {
+    const { data, error } = await supabase.rpc('close_game_room', {
+      p_code: code,
+      p_host_token: hostToken
+    });
+
+    if (error) {
+      return {
+        success: false,
+        error: error.message || 'Error al cerrar la sala.'
+      };
+    }
+
+    return data || { success: true };
+  } catch (err) {
+    return { success: false, error: 'Error de red al cerrar la sala.' };
+  }
 }
