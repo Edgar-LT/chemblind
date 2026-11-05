@@ -262,33 +262,45 @@ export async function broadcastRoomEvent(channel, event, payload) {
   }
 }
 
+const updateDebounceTimers = new Map();
+
 /**
  * Updates room row in Supabase with host verification.
+ * Debounced to protect Postgres from write amplification during rapid interactions.
  * @param {string} roomId
  * @param {Object} fields
  * @param {string} [hostToken]
  */
-export async function updateRoomRecord(roomId, fields, hostToken = null) {
+export function updateRoomRecord(roomId, fields, hostToken = null) {
   const supabase = getSupabase();
-  if (!supabase) return;
+  if (!supabase || !roomId) return;
 
-  try {
-    let query = supabase
-      .from('rooms')
-      .update({ ...fields, updated_at: new Date().toISOString() })
-      .eq('id', roomId);
-
-    if (hostToken) {
-      query = query.eq('host_token', hostToken);
-    }
-
-    const { error } = await query;
-    if (error) {
-      console.warn('[ChemBlind/Supabase] Advertencia al actualizar sala:', error.message);
-    }
-  } catch (err) {
-    console.warn('[ChemBlind/Supabase] Error en updateRoomRecord:', err);
+  if (updateDebounceTimers.has(roomId)) {
+    clearTimeout(updateDebounceTimers.get(roomId));
   }
+
+  const timer = setTimeout(async () => {
+    updateDebounceTimers.delete(roomId);
+    try {
+      let query = supabase
+        .from('rooms')
+        .update({ ...fields, updated_at: new Date().toISOString() })
+        .eq('id', roomId);
+
+      if (hostToken) {
+        query = query.eq('host_token', hostToken);
+      }
+
+      const { error } = await query;
+      if (error) {
+        console.warn('[ChemBlind/Supabase] Advertencia al actualizar sala:', error.message);
+      }
+    } catch (err) {
+      console.warn('[ChemBlind/Supabase] Error en updateRoomRecord:', err);
+    }
+  }, 250);
+
+  updateDebounceTimers.set(roomId, timer);
 }
 
 /**
