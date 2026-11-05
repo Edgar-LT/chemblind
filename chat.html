@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ChemBlind Chat — Conversación en Vivo</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap"
+    rel="stylesheet"
+  />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="./css/styles.css?v=2.3.6" />
+
+  <style>
+    body {
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .standalone-chat-app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      max-width: 540px;
+      margin: 0 auto;
+      width: 100%;
+      background: var(--bg-elevated);
+      border-left: 1px solid var(--border-hairline);
+      border-right: 1px solid var(--border-hairline);
+    }
+
+    .standalone-chat-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-hairline);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .standalone-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .standalone-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--accent-champagne-soft);
+      border: 1px solid var(--border-gold);
+      color: var(--accent-champagne);
+      display: grid;
+      place-items: center;
+      font-size: 1.1rem;
+      position: relative;
+    }
+
+    .standalone-status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #34c759;
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      border: 2px solid var(--bg-elevated);
+    }
+
+    .standalone-meta h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0;
+      color: var(--text-primary);
+    }
+
+    .standalone-meta span {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .standalone-feed {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overscroll-behavior: contain;
+    }
+
+    .standalone-input-bar {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border-hairline);
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .standalone-input {
+      flex: 1;
+      padding: 12px 18px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      color: var(--text-primary);
+      font-size: 0.92rem;
+      outline: none;
+      transition: all 0.2s var(--ease-horology);
+    }
+
+    .standalone-input:focus {
+      border-color: var(--accent-champagne);
+      box-shadow: 0 0 0 2px var(--accent-champagne-soft);
+    }
+
+    .standalone-send-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--accent-champagne);
+      color: #0a0a0c;
+      border: none;
+      display: grid;
+      place-items: center;
+      font-size: 1.1rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+
+    .standalone-send-btn:active {
+      transform: scale(0.94);
+    }
+  </style>
+</head>
+<body>
+  <div class="standalone-chat-app">
+    <header class="standalone-chat-header">
+      <div class="standalone-header-left">
+        <div class="standalone-avatar">
+          <span>✦</span>
+          <span class="standalone-status-dot"></span>
+        </div>
+        <div class="standalone-meta">
+          <h1 id="chat-partner-title">Tu Cita</h1>
+          <span id="chat-room-status">Sondeo activo &bull; ChemBlind API</span>
+        </div>
+      </div>
+      <span id="chat-room-badge" class="room-capsule-tag tabular-nums">SALA --</span>
+    </header>
+
+    <main id="chat-messages" class="standalone-feed">
+      <div class="chat-empty-state">
+        <span class="chat-empty-icon">💬</span>
+        <p>Inicia la conversación o responde a la carta para verse aquí.</p>
+      </div>
+    </main>
+
+    <form id="chat-form" class="standalone-input-bar">
+      <input
+        type="text"
+        id="chat-input"
+        class="standalone-input"
+        placeholder="Escribe un mensaje en vivo..."
+        maxlength="360"
+        autocomplete="off"
+        required
+      />
+      <button type="submit" class="standalone-send-btn" title="Enviar mensaje">
+        <span>➤</span>
+      </button>
+    </form>
+  </div>
+
+  <script type="module">
+    import { ChatRoomAPI } from './js/chat-service.js?v=2.3.6';
+
+    const params = new URLSearchParams(window.location.search);
+    const roomCode = params.get('room') || prompt('Ingresa el código de la sala (Ej: CB-XXXX):') || '';
+    const myName = params.get('name') || prompt('Ingresa tu nombre:') || 'Jugador';
+    const senderId = 'sess_' + Math.random().toString(36).slice(2, 9);
+
+    const roomBadge = document.getElementById('chat-room-badge');
+    const partnerTitle = document.getElementById('chat-partner-title');
+    const messagesFeed = document.getElementById('chat-messages');
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('chat-input');
+
+    if (roomBadge) roomBadge.textContent = roomCode ? `SALA ${roomCode}` : 'SIN SALA';
+
+    const chatAPI = new ChatRoomAPI();
+
+    function addMessageToFeed(msg) {
+      const emptyState = messagesFeed.querySelector('.chat-empty-state');
+      if (emptyState) emptyState.remove();
+
+      const row = document.createElement('div');
+      row.className = `chat-bubble-row ${msg.isOutgoing ? 'outgoing' : 'incoming'}`;
+
+      const author = document.createElement('span');
+      author.className = 'chat-bubble-author';
+      author.textContent = msg.authorName || (msg.isOutgoing ? 'Tú' : 'Tu Cita');
+      row.appendChild(author);
+
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble-bubble';
+
+      if (msg.isCardResponse) {
+        const badge = document.createElement('span');
+        badge.className = 'chat-bubble-badge';
+        badge.textContent = '✦ Respuesta a la carta';
+        bubble.appendChild(badge);
+      }
+
+      bubble.appendChild(document.createTextNode(msg.text));
+      row.appendChild(bubble);
+
+      const time = document.createElement('span');
+      time.className = 'chat-bubble-time';
+      time.textContent = msg.timeStr || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      row.appendChild(time);
+
+      messagesFeed.appendChild(row);
+      messagesFeed.scrollTop = messagesFeed.scrollHeight;
+    }
+
+    if (roomCode) {
+      chatAPI.connect({
+        roomCode,
+        senderId,
+        authorName: myName,
+        authorRole: 'player',
+        onMessage: (msg) => {
+          addMessageToFeed(msg);
+          if (!msg.isOutgoing && 'Notification' in window && Notification.permission === 'granted') {
+            new Notification(`Mensaje de ${msg.authorName}`, { body: msg.text });
+          }
+        },
+        onInitialHistory: (history) => {
+          history.forEach((msg) => {
+            const isOutgoing = msg.senderId === senderId;
+            addMessageToFeed({ ...msg, isOutgoing });
+          });
+        }
+      });
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+      const sent = await chatAPI.sendMessage(text);
+      if (sent) {
+        addMessageToFeed({ ...sent, isOutgoing: true });
+      }
+    });
+  </script>
+</body>
+</html>

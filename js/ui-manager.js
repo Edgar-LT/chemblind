@@ -107,6 +107,7 @@ export class UIManager {
       chatConversationModal: byId('chat-conversation-modal'),
       chatModalPartnerName: byId('chat-modal-partner-name'),
       closeChatModalBtn: byId('close-chat-modal-btn'),
+      popoutChatBtn: byId('popout-chat-btn'),
       chatModalCardPrompt: byId('chat-modal-card-prompt'),
       chatModalMessages: byId('chat-modal-messages'),
       chatModalForm: byId('chat-modal-form'),

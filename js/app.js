@@ -35,6 +35,7 @@ import {
 
 import { ChronographService } from './chronograph.js';
 import { UIManager } from './ui-manager.js';
+import { ChatRoomAPI } from './chat-service.js';
 
 const STORAGE_KEY_CUSTOM_CARDS = 'chemblind_custom_cards_v1';
 const STORAGE_KEY_THEME = 'chemblind_theme_v1';
@@ -50,8 +51,9 @@ class ChemBlindAppController {
     this.activeRoomsList = [];
     this.renderedMessageIds = new Set();
 
-    // Initialize decoupled UI & Timing subsystems
+    // Initialize decoupled UI, Timing & Standalone Chat API subsystems
     this.ui = new UIManager();
+    this.chatAPI = new ChatRoomAPI();
     this.chrono = new ChronographService({
       onTick: ({ remainingSec, isRunning }) => {
         this.ui.renderTimer(remainingSec, this.chrono.isRunning);
@@ -292,6 +294,15 @@ class ChemBlindAppController {
 
     el.closeChatModalBtn?.addEventListener('click', () => {
       this.ui.setChatModalOpen(false);
+    });
+
+    el.popoutChatBtn?.addEventListener('click', () => {
+      if (this.roomSession?.code) {
+        const myName = this.roomSession.role === 'player_one' ? this.roomSession.p1Name : this.roomSession.p2Name;
+        window.open(`./chat.html?room=${this.roomSession.code}&name=${encodeURIComponent(myName || 'Jugador')}`, '_blank');
+      } else {
+        this.ui.showToast('La sala debe estar activa para abrir el chat en pestaña independiente');
+      }
     });
 
     el.chatConversationModal?.addEventListener('click', (e) => {
@@ -696,6 +707,21 @@ class ChemBlindAppController {
   connectToRealtimeRoom(roomCode) {
     if (!this.roomSession) return;
 
+    // Connect Decoupled Standalone Chat API with active 1.5s server polling + WebSockets
+    const myChatName = this.roomSession.role === 'player_one' ? this.roomSession.p1Name : this.roomSession.p2Name;
+    this.chatAPI.connect({
+      roomCode,
+      senderId: getSessionClientId(),
+      authorName: myChatName,
+      authorRole: this.roomSession.role,
+      onMessage: (msg) => {
+        this.handleIncomingChatMessage(msg);
+      },
+      onInitialHistory: (history) => {
+        this.hydrateInitialChat(history);
+      }
+    });
+
     this.roomSession.channel = subscribeToRoomChannel(roomCode, {
       onPlayerJoined: (payload) => {
         if (this.roomSession.role === 'player_one') {
@@ -783,26 +809,15 @@ class ChemBlindAppController {
     });
   }
 
-  /**
-   * Synchronizes chat history loaded from PostgreSQL with deduplication.
-   * @param {Array<Object>} messages
-   */
-  syncChatHistory(messages) {
+  hydrateInitialChat(messages) {
     if (!Array.isArray(messages)) return;
-    const mySenderId = getSessionClientId();
-
-    let newIncomingCount = 0;
-    let latestIncoming = null;
-
     messages.forEach((msg) => {
       if (!msg || !msg.text) return;
-      const msgId = msg.id || `hist_${msg.timestamp || Date.now()}_${msg.authorName || 'user'}`;
-
+      const msgId = msg.id || `msg_${msg.timestamp || Date.now()}`;
       if (this.renderedMessageIds.has(msgId)) return;
       this.renderedMessageIds.add(msgId);
 
-      const isOutgoing = Boolean(msg.senderId && msg.senderId === mySenderId);
-
+      const isOutgoing = Boolean(msg.senderId && msg.senderId === getSessionClientId());
       this.ui.addChatMessage({
         authorName: msg.authorName || (isOutgoing ? 'Tú' : 'Tu Cita'),
         isOutgoing,
@@ -811,65 +826,48 @@ class ChemBlindAppController {
         isCardResponse: Boolean(msg.isCardResponse)
       });
 
-      if (!isOutgoing) {
-        newIncomingCount++;
-        latestIncoming = msg;
-        if (msg.isCardResponse && (!msg.cardId || msg.cardId === this.state?.currentCard?.id)) {
-          this.ui.showResponseDisplay(msg.authorName || 'Tu Cita', msg.text, false);
-        }
+      if (!isOutgoing && msg.isCardResponse && (!msg.cardId || msg.cardId === this.state?.currentCard?.id)) {
+        this.ui.showResponseDisplay(msg.authorName || 'Tu Cita', msg.text, false);
       }
     });
-
-    if (newIncomingCount > 0 && latestIncoming) {
-      this.ui.setChatModalOpen(true);
-      this.ui.showToast(`💬 Mensaje de ${latestIncoming.authorName || 'Tu Cita'}`);
-    }
   }
 
   /**
-   * Processes an incoming message (via broadcast or DB) with zero message loss and instant popup.
-   * @param {Object} payload
+   * Processes incoming chat message from ChatRoomAPI (via active polling heartbeat or WebSocket).
+   * @param {Object} msg
    */
-  handleIncomingMessage(payload) {
-    if (!payload || !payload.text) return;
-    const msgId = payload.id || `msg_${payload.timestamp || Date.now()}_${payload.authorName || 'partner'}`;
+  handleIncomingChatMessage(msg) {
+    if (!msg || !msg.text) return;
+    const msgId = msg.id || `msg_${msg.timestamp || Date.now()}`;
 
     if (this.renderedMessageIds.has(msgId)) return;
-
-    const mySenderId = getSessionClientId();
-    const isOutgoing = Boolean(payload.senderId && payload.senderId === mySenderId);
-
-    if (isOutgoing) return;
-
     this.renderedMessageIds.add(msgId);
 
-    // 1. Add incoming bubble to chat thread
-    const timeStr = payload.timeStr || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (msg.isOutgoing) return;
+
+    // 1. Add bubble to chat thread
     this.ui.addChatMessage({
-      authorName: payload.authorName || 'Tu Cita',
+      authorName: msg.authorName || 'Tu Cita',
       isOutgoing: false,
-      text: payload.text,
-      timeStr,
-      isCardResponse: Boolean(payload.isCardResponse)
+      text: msg.text,
+      timeStr: msg.timeStr || '',
+      isCardResponse: Boolean(msg.isCardResponse)
     });
 
     // 2. If it is a card response for the active card, update card quote box
-    if (payload.isCardResponse && (!payload.cardId || payload.cardId === this.state?.currentCard?.id)) {
-      this.ui.showResponseDisplay(payload.authorName || 'Tu Cita', payload.text, false);
+    if (msg.isCardResponse && (!msg.cardId || msg.cardId === this.state?.currentCard?.id)) {
+      this.ui.showResponseDisplay(msg.authorName || 'Tu Cita', msg.text, false);
     }
 
-    // 3. Just like Facebook Messenger: automatically pop open the conversation modal and toast!
+    // 3. Immediately open conversation modal like Facebook Messenger & display notification
     this.ui.setChatModalOpen(true);
-    this.ui.showToast(`💬 Mensaje de ${payload.authorName || 'Tu Cita'}`);
+    this.ui.showToast(`💬 ${msg.authorName || 'Tu Cita'}: ${msg.text.slice(0, 32)}...`);
 
     // 4. Update affinity score if present
-    if (typeof payload.chemistryScore === 'number' && this.state) {
-      this.state.chemistryScore = payload.chemistryScore;
-      this.ui.renderChemistry(payload.chemistryScore);
+    if (typeof msg.chemistryScore === 'number' && this.state) {
+      this.state.chemistryScore = clampNumber(msg.chemistryScore, 0, 100);
+      this.ui.renderChemistry(this.state.chemistryScore);
     }
-
-    // 5. Toast notification
-    this.ui.showToast(`💬 ${payload.authorName || 'Tu Cita'}: "${payload.text.substring(0, 36)}..."`);
   }
 
   syncRoomState(actionType) {
@@ -1036,142 +1034,87 @@ class ChemBlindAppController {
       return;
     }
 
-    // Determine author name based on session role or local active player
     let authorName = 'Tú';
-    let authorRole = 'local';
-
     if (this.roomSession) {
-      authorRole = this.roomSession.role;
-      if (this.roomSession.role === 'player_one') {
-        authorName = this.roomSession.p1Name || 'Anfitrión';
-      } else {
-        authorName = this.roomSession.p2Name || 'Invitado';
-      }
-    } else {
-      const activePlayer = this.state.players[this.state.activePlayerIndex];
-      authorName = activePlayer?.name || 'Jugador';
+      authorName = this.roomSession.role === 'player_one'
+        ? (this.roomSession.p1Name || 'Anfitrión')
+        : (this.roomSession.p2Name || 'Invitado');
     }
-
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const msgId = `resp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const senderId = getSessionClientId();
 
     // 1. Display locally on the card with edit permission
     this.ui.showResponseDisplay(authorName, text, true);
     this.clearDraftResponse();
     this.persistLocalSession();
 
-    // 2. Add to chat thread as an outgoing card response bubble
-    this.renderedMessageIds.add(msgId);
-    this.ui.addChatMessage({
-      authorName,
-      isOutgoing: true,
-      text,
-      timeStr,
-      isCardResponse: true
-    });
-
-    // 3. Automatically open the conversation chat modal on screen
+    // 2. Open chat modal
     this.ui.setChatModalOpen(true);
 
-    // 4. Chemistry affinity bonus (+3%)
+    // 3. Chemistry affinity bonus (+3%)
     const newScore = Math.min(100, (this.state.chemistryScore || 0) + 3);
     this.state.chemistryScore = newScore;
     this.ui.renderChemistry(newScore);
 
-    // 5. Broadcast in room session and persist in PostgreSQL
-    if (this.roomSession) {
+    // 4. Send atomically via Standalone Chat API
+    if (this.roomSession && this.chatAPI) {
       const cardPrompt = this.ui.elements.cardPromptText?.textContent || '';
-      const messagePayload = {
-        id: msgId,
-        senderId,
+      const sent = await this.chatAPI.sendMessage(text, {
+        isCardResponse: true,
         cardId: this.state.currentCard.id,
         cardPrompt,
-        authorName,
-        authorRole,
-        text,
-        timeStr,
-        isCardResponse: true,
-        chemistryScore: newScore,
-        timestamp: Date.now()
-      };
+        chemistryScore: newScore
+      });
 
-      // Realtime WebSocket broadcast
-      if (this.roomSession.channel) {
-        broadcastRoomEvent(this.roomSession.channel, 'CARD_RESPONSE', messagePayload);
+      if (sent) {
+        this.renderedMessageIds.add(sent.id);
+        this.ui.addChatMessage({ ...sent, isOutgoing: true, isCardResponse: true });
       }
-
-      // Atomic persistence in PostgreSQL
-      await saveRoomMessage(this.roomSession.code, messagePayload);
 
       this.syncRoomState('CARD_RESPONSE');
       this.ui.showToast('¡Respuesta enviada a tu cita! ✦');
     } else {
+      this.ui.addChatMessage({
+        authorName,
+        isOutgoing: true,
+        text,
+        timeStr: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isCardResponse: true
+      });
       this.ui.showToast('¡Respuesta guardada en la conversación! ✦');
     }
   }
 
   /**
-   * Handles sending a direct chat message from the conversation modal.
+   * Handles sending a direct chat message from the conversation modal using ChatRoomAPI.
    */
   async handleSendChatMessage() {
     const inputEl = this.ui.elements.chatModalInput;
     const text = inputEl ? inputEl.value.trim() : '';
     if (!text) return;
 
-    let authorName = 'Tú';
-    let authorRole = 'local';
-
-    if (this.roomSession) {
-      authorRole = this.roomSession.role;
-      authorName = this.roomSession.role === 'player_one'
-        ? (this.roomSession.p1Name || 'Anfitrión')
-        : (this.roomSession.p2Name || 'Invitado');
-    } else if (this.state) {
-      const activePlayer = this.state.players[this.state.activePlayerIndex];
-      authorName = activePlayer?.name || 'Jugador';
-    }
-
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const msgId = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const senderId = getSessionClientId();
-
-    // Add outgoing bubble locally
-    this.renderedMessageIds.add(msgId);
-    this.ui.addChatMessage({
-      authorName,
-      isOutgoing: true,
-      text,
-      timeStr,
-      isCardResponse: false
-    });
-
     if (inputEl) {
       inputEl.value = '';
     }
 
-    // Broadcast if connected in room and persist in PostgreSQL
-    if (this.roomSession) {
-      const messagePayload = {
-        id: msgId,
-        senderId,
-        authorName,
-        authorRole,
-        text,
-        timeStr,
-        isCardResponse: false,
-        timestamp: Date.now()
-      };
-
-      if (this.roomSession.channel) {
-        broadcastRoomEvent(this.roomSession.channel, 'CHAT_MESSAGE', messagePayload);
+    if (this.roomSession && this.chatAPI) {
+      const sent = await this.chatAPI.sendMessage(text, { isCardResponse: false });
+      if (sent) {
+        this.renderedMessageIds.add(sent.id);
+        this.ui.addChatMessage({ ...sent, isOutgoing: true });
       }
-
-      await saveRoomMessage(this.roomSession.code, messagePayload);
+    } else {
+      const activePlayer = this.state?.players[this.state.activePlayerIndex];
+      this.ui.addChatMessage({
+        authorName: activePlayer?.name || 'Tú',
+        isOutgoing: true,
+        text,
+        timeStr: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isCardResponse: false
+      });
     }
   }
 
   teardownRoomSession() {
+    this.chatAPI?.disconnect();
     if (this.roomSession?.code) {
       try {
         sessionStorage.removeItem(`chemblind_session_${this.roomSession.code}`);
