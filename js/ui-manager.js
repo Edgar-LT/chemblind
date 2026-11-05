@@ -86,8 +86,18 @@ export class UIManager {
       completeTurnBtn: byId('complete-turn-btn'),
       wildcardSkipBtn: byId('wildcard-skip-btn'),
       wildcardBtnCount: byId('wildcard-btn-count'),
-      shareWhatsappBtn: byId('share-whatsapp-btn'),
-      shareBtnLabel: byId('share-btn-label'),
+
+      // Interactive Card Response Section
+      cardResponseSection: byId('card-response-section'),
+      responseInputBox: byId('response-input-box'),
+      cardResponseInput: byId('card-response-input'),
+      responseCharCount: byId('response-char-count'),
+      sendResponseBtn: byId('send-response-btn'),
+      responseDisplayBox: byId('response-display-box'),
+      responseAuthorName: byId('response-author-name'),
+      responseDisplayText: byId('response-display-text'),
+      editResponseBtn: byId('edit-response-btn'),
+      responseStatusBadge: byId('response-status-badge'),
 
       // Custom Card Modal
       customCardModal: byId('custom-card-modal'),
@@ -272,11 +282,75 @@ export class UIManager {
     if (this.elements.wildcardSkipBtn) {
       this.elements.wildcardSkipBtn.disabled = activePlayer.wildcards <= 0;
     }
+  }
 
-    // Action button labels
-    if (this.elements.shareBtnLabel) {
-      this.elements.shareBtnLabel.textContent =
-        state.gameMode === 'online' ? 'Copiar / WhatsApp' : 'Compartir';
+  /**
+   * Resets the interactive card response box to its empty drafting state.
+   */
+  resetResponseSection() {
+    if (this.elements.cardResponseInput) {
+      this.elements.cardResponseInput.value = '';
+    }
+    if (this.elements.responseCharCount) {
+      this.elements.responseCharCount.textContent = '0 / 360';
+    }
+    if (this.elements.responseDisplayText) {
+      this.elements.responseDisplayText.textContent = '';
+    }
+    if (this.elements.responseAuthorName) {
+      this.elements.responseAuthorName.textContent = '';
+    }
+    this.elements.responseInputBox?.classList.remove('is-hidden');
+    this.elements.responseDisplayBox?.classList.add('is-hidden');
+    if (this.elements.editResponseBtn) {
+      this.elements.editResponseBtn.style.display = '';
+    }
+  }
+
+  /**
+   * Displays a submitted card response in the refined quote container.
+   * @param {string} authorName
+   * @param {string} text
+   * @param {boolean} canEdit
+   */
+  showResponseDisplay(authorName, text, canEdit = true) {
+    if (this.elements.responseAuthorName) {
+      this.elements.responseAuthorName.textContent = authorName;
+    }
+    if (this.elements.responseDisplayText) {
+      this.elements.responseDisplayText.textContent = text;
+    }
+    if (this.elements.editResponseBtn) {
+      this.elements.editResponseBtn.style.display = canEdit ? 'inline-flex' : 'none';
+    }
+    this.elements.responseInputBox?.classList.add('is-hidden');
+    this.elements.responseDisplayBox?.classList.remove('is-hidden');
+  }
+
+  /**
+   * Restores input mode for editing an existing response.
+   * @param {string} prefilledText
+   */
+  showResponseInput(prefilledText = '') {
+    if (this.elements.cardResponseInput) {
+      if (prefilledText) {
+        this.elements.cardResponseInput.value = prefilledText;
+      }
+      this.updateResponseCharCount(this.elements.cardResponseInput.value.length);
+      this.elements.cardResponseInput.focus();
+    }
+    this.elements.responseInputBox?.classList.remove('is-hidden');
+    this.elements.responseDisplayBox?.classList.add('is-hidden');
+  }
+
+  /**
+   * Updates the character counter for the response textarea.
+   * @param {number} count
+   * @param {number} [max=360]
+   */
+  updateResponseCharCount(count, max = 360) {
+    if (this.elements.responseCharCount) {
+      this.elements.responseCharCount.textContent = `${count} / ${max}`;
     }
   }
 

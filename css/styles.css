@@ -156,6 +156,33 @@
   color: var(--text-muted);
 }
 
+/* Respuesta Interactiva en Modo Claro */
+[data-theme="light"] .card-response-section {
+  border-top-color: rgba(17, 18, 21, 0.1);
+}
+
+[data-theme="light"] .card-response-textarea {
+  background: #ffffff;
+  border: 1px solid rgba(17, 18, 21, 0.14);
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .card-response-textarea:focus {
+  border-color: var(--accent-champagne);
+  box-shadow: 0 0 0 3px rgba(143, 97, 32, 0.12);
+}
+
+[data-theme="light"] .response-display-box {
+  background: linear-gradient(145deg, rgba(143, 97, 32, 0.05) 0%, #ffffff 100%);
+  border: 1px solid rgba(143, 97, 32, 0.32);
+  border-top-color: rgba(143, 97, 32, 0.5);
+  box-shadow: 0 2px 10px rgba(17, 18, 21, 0.03);
+}
+
+[data-theme="light"] .response-display-text {
+  color: #111215;
+}
+
 /* Píldoras y Controles de Navegación */
 [data-theme="light"] .players-pill,
 [data-theme="light"] .icon-btn {
@@ -930,6 +957,172 @@ textarea {
   font-size: 0.9rem;
   cursor: pointer;
   padding: 2px 6px;
+}
+
+/* ==========================================================================
+   Sección de Respuesta Interactiva a la Carta (Luxury Editorial / Precision)
+   ========================================================================== */
+
+.card-response-section {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--border-hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Modo Formulario / Redacción */
+.response-input-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: fadeInResponse 0.28s var(--ease-horology);
+}
+
+.response-input-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.response-input-label {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.response-char-count {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.card-response-textarea {
+  min-height: 84px;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  padding: 12px 16px;
+  border-radius: var(--radius-control);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  color: var(--text-primary);
+  resize: vertical;
+  transition: all 0.22s var(--ease-horology);
+}
+
+.card-response-textarea:focus {
+  border-color: var(--accent-champagne);
+  box-shadow: 0 0 0 3px var(--accent-champagne-soft);
+  outline: none;
+}
+
+.response-action-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-send-response {
+  padding: 8px 20px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.btn-send-response .send-icon {
+  font-size: 0.85rem;
+  color: var(--accent-champagne);
+}
+
+/* Modo Exhibición de Respuesta (Haute Horlogerie Intimate Quote Card) */
+.response-display-box {
+  padding: 16px 20px;
+  border-radius: var(--radius-card);
+  background:
+    linear-gradient(145deg, rgba(197, 160, 89, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%),
+    var(--bg-subtle);
+  border: 1px solid var(--border-gold);
+  border-top-color: var(--border-specular);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  animation: fadeInResponse 0.35s var(--ease-horology);
+}
+
+.response-display-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.response-author-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent-champagne);
+  font-weight: 600;
+}
+
+.response-author-icon {
+  font-size: 0.8rem;
+  color: var(--accent-champagne);
+}
+
+.edit-response-btn {
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  border-radius: var(--radius-pill);
+}
+
+.edit-response-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.response-display-text {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.18rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+  font-style: italic;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.response-display-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.response-status-badge {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+@keyframes fadeInResponse {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Pie de la Carta */

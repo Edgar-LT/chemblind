@@ -188,6 +188,7 @@ class ChemBlindAppController {
         if (targetLevel === this.state.currentLevel) return;
 
         this.chrono.stop();
+        this.ui.resetResponseSection();
         this.state = setIntensityLevel(this.state, targetLevel);
         this.syncRoomState('LEVEL_CHANGED');
         this.ui.animateCardTransition(() => {
@@ -201,6 +202,7 @@ class ChemBlindAppController {
     el.completeTurnBtn?.addEventListener('click', () => {
       if (!this.state) return;
       this.chrono.stop();
+      this.ui.resetResponseSection();
       this.state = completeCurrentTurn(this.state);
       this.syncRoomState('NEXT_CARD');
       this.ui.animateCardTransition(() => {
@@ -218,6 +220,7 @@ class ChemBlindAppController {
         return;
       }
       this.chrono.stop();
+      this.ui.resetResponseSection();
       this.state = result.state;
       this.syncRoomState('WILDCARD_SKIP');
       this.ui.animateCardTransition(() => {
@@ -227,14 +230,20 @@ class ChemBlindAppController {
       this.ui.showToast('Carta saltada con comodín');
     });
 
-    // Share Card via WhatsApp
-    el.shareWhatsappBtn?.addEventListener('click', () => {
-      if (!this.state?.currentCard) return;
-      const formattedText = el.cardPromptText?.textContent || '';
-      const levelMeta = LEVEL_METADATA[this.state.currentLevel];
-      const shareMessage = `✨ *CHEMBLIND* (${levelMeta.name})\n\n"${formattedText}"`;
-      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
-      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    // Card Response: Live Character Counter
+    el.cardResponseInput?.addEventListener('input', (e) => {
+      this.ui.updateResponseCharCount(e.target.value.length);
+    });
+
+    // Card Response: Send Response
+    el.sendResponseBtn?.addEventListener('click', () => {
+      this.handleSendResponse();
+    });
+
+    // Card Response: Edit Sent Response
+    el.editResponseBtn?.addEventListener('click', () => {
+      const currentText = this.ui.elements.responseDisplayText?.textContent || '';
+      this.ui.showResponseInput(currentText);
     });
 
     // Chrono Controls
@@ -416,6 +425,7 @@ class ChemBlindAppController {
   }
 
   hydrateAndStartGame(roomData, guestName) {
+    this.ui.resetResponseSection();
     this.state = createInitialGameState({
       playerOne: roomData.player_one_name,
       playerTwo: guestName,
@@ -622,6 +632,18 @@ class ChemBlindAppController {
         }
         this.handleRemoteCardAction(payload);
       },
+      onCardResponse: (payload) => {
+        if (!payload || !payload.text) return;
+        // Don't re-render if it's our own broadcast
+        if (payload.authorRole && payload.authorRole === this.roomSession?.role) return;
+
+        this.ui.showResponseDisplay(payload.authorName || 'Tu pareja', payload.text, false);
+        if (typeof payload.chemistryScore === 'number' && this.state) {
+          this.state.chemistryScore = payload.chemistryScore;
+          this.ui.renderChemistry(payload.chemistryScore);
+        }
+        this.ui.showToast(`¡${payload.authorName || 'Tu pareja'} ha respondido a la carta! ✦`);
+      },
       onStateUpdate: (newRecord) => {
         // Lifecycle fallback: detect player 2 initial join if broadcast missed
         if (this.roomSession?.role === 'player_one' && newRecord.player_two_joined && !this.roomSession.p2Name) {
@@ -667,6 +689,8 @@ class ChemBlindAppController {
   handleRemoteCardAction(payload) {
     if (!payload.currentCardId) return;
 
+    this.ui.resetResponseSection();
+
     const allCards = [...this.state.customCards, ...DEFAULT_CARDS];
     const targetCard = allCards.find((c) => c.id === payload.currentCardId);
 
@@ -683,6 +707,63 @@ class ChemBlindAppController {
       this.syncTimerWithCurrentCard();
       this.ui.renderGameStage(this.state, this.roomSession);
     });
+  }
+
+  /**
+   * Handles in-app submission of a card response.
+   */
+  handleSendResponse() {
+    if (!this.state || !this.state.currentCard) return;
+
+    const inputEl = this.ui.elements.cardResponseInput;
+    const text = inputEl ? inputEl.value.trim() : '';
+
+    if (!text) {
+      this.ui.showToast('Escribe tu respuesta antes de enviar');
+      inputEl?.focus();
+      return;
+    }
+
+    // Determine author name based on session role or local active player
+    let authorName = 'Tú';
+    let authorRole = 'local';
+
+    if (this.roomSession) {
+      authorRole = this.roomSession.role;
+      if (this.roomSession.role === 'player_one') {
+        authorName = this.roomSession.p1Name || 'Anfitrión';
+      } else {
+        authorName = this.roomSession.p2Name || 'Invitado';
+      }
+    } else {
+      const activePlayer = this.state.players[this.state.activePlayerIndex];
+      authorName = activePlayer?.name || 'Jugador';
+    }
+
+    // Display locally with edit permission
+    this.ui.showResponseDisplay(authorName, text, true);
+
+    // Chemistry affinity bonus (+3%)
+    const newScore = Math.min(100, (this.state.chemistryScore || 0) + 3);
+    this.state.chemistryScore = newScore;
+    this.ui.renderChemistry(newScore);
+
+    // Broadcast in 2-phone room session
+    if (this.roomSession?.channel) {
+      broadcastRoomEvent(this.roomSession.channel, 'CARD_RESPONSE', {
+        cardId: this.state.currentCard.id,
+        authorName,
+        authorRole,
+        text,
+        chemistryScore: newScore,
+        timestamp: Date.now()
+      });
+
+      this.syncRoomState('CARD_RESPONSE');
+      this.ui.showToast('¡Respuesta enviada a tu cita! ✦');
+    } else {
+      this.ui.showToast('¡Respuesta guardada! ✦');
+    }
   }
 
   teardownRoomSession() {
@@ -789,6 +870,7 @@ class ChemBlindAppController {
 
   startLocalSession(playerOne, playerTwo, gameMode, initialLevel) {
     this.teardownRoomSession();
+    this.ui.resetResponseSection();
     this.state = createInitialGameState({
       playerOne,
       playerTwo,

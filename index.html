@@ -362,6 +362,50 @@
               ↺
             </button>
           </div>
+
+          <!-- Sección de Respuesta Interactiva a la Carta -->
+          <div id="card-response-section" class="card-response-section">
+            <!-- Formulario de Respuesta (Redacción) -->
+            <div id="response-input-box" class="response-input-box">
+              <div class="response-input-header">
+                <label for="card-response-input" class="response-input-label">
+                  <span class="response-input-prompt">Escribe tu respuesta</span>
+                </label>
+                <span id="response-char-count" class="response-char-count tabular-nums">0 / 360</span>
+              </div>
+              <textarea
+                id="card-response-input"
+                class="luxury-textarea card-response-textarea"
+                rows="3"
+                maxlength="360"
+                placeholder="Escribe tu respuesta aquí con total sinceridad..."
+                aria-label="Respuesta a la carta"
+              ></textarea>
+              <div class="response-action-row">
+                <button type="button" id="send-response-btn" class="btn-flagship btn-send-response">
+                  <span>Responder</span>
+                  <span class="send-icon">✦</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Caja de Exhibición de la Respuesta (Una vez enviada) -->
+            <div id="response-display-box" class="response-display-box is-hidden">
+              <div class="response-display-header">
+                <div class="response-author-pill">
+                  <span class="response-author-icon">✦</span>
+                  <span class="response-author-text">Respuesta de <strong id="response-author-name">Jugador</strong></span>
+                </div>
+                <button type="button" id="edit-response-btn" class="btn-ghost btn-xs edit-response-btn" title="Editar tu respuesta">
+                  <span>✎ Editar</span>
+                </button>
+              </div>
+              <blockquote id="response-display-text" class="response-display-text"></blockquote>
+              <div class="response-display-footer">
+                <span id="response-status-badge" class="response-status-badge">Compartida en la cita</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Pie de la Carta: Acciones Limpias -->
@@ -370,10 +414,6 @@
             <button type="button" id="wildcard-skip-btn" class="btn-ghost" title="Saltar esta carta usando un comodín">
               <span>Saltar</span>
               <span id="wildcard-btn-count" class="tabular-nums">(2)</span>
-            </button>
-
-            <button type="button" id="share-whatsapp-btn" class="btn-ghost" title="Enviar esta carta por WhatsApp">
-              <span id="share-btn-label">Compartir ↗</span>
             </button>
           </div>
 

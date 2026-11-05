@@ -203,9 +203,10 @@ export async function fetchRoomData(code, accessToken) {
  * @param {Function} handlers.onStateUpdate
  * @param {Function} handlers.onPlayerJoined
  * @param {Function} handlers.onCardAction
+ * @param {Function} [handlers.onCardResponse]
  * @returns {Object|null} Realtime Channel instance
  */
-export function subscribeToRoomChannel(roomCode, { onStateUpdate, onPlayerJoined, onCardAction }) {
+export function subscribeToRoomChannel(roomCode, { onStateUpdate, onPlayerJoined, onCardAction, onCardResponse }) {
   const supabase = getSupabase();
   if (!supabase) return null;
 
@@ -233,6 +234,9 @@ export function subscribeToRoomChannel(roomCode, { onStateUpdate, onPlayerJoined
       })
       .on('broadcast', { event: 'CARD_ACTION' }, (payload) => {
         if (onCardAction) onCardAction(payload.payload);
+      })
+      .on('broadcast', { event: 'CARD_RESPONSE' }, (payload) => {
+        if (onCardResponse) onCardResponse(payload.payload);
       })
       .subscribe();
 
