@@ -501,8 +501,8 @@ class ChemBlindAppController {
     // Check if we have an active session snapshot in sessionStorage for this tab
     const localSnapshot = this.restoreLocalSessionSnapshot(roomData.code);
 
-    const initialLevel = localSnapshot?.currentLevel || roomData.level || 1;
-    const targetCardId = localSnapshot?.currentCardId || roomData.current_card_id;
+    const initialLevel = roomData.level || localSnapshot?.currentLevel || 1;
+    const targetCardId = roomData.current_card_id || localSnapshot?.currentCardId;
 
     this.state = createInitialGameState({
       playerOne: roomData.player_one_name,
@@ -719,6 +719,9 @@ class ChemBlindAppController {
       },
       onInitialHistory: (history) => {
         this.hydrateInitialChat(history);
+      },
+      onStateSync: (roomState) => {
+        this.handleRemoteRoomStateSync(roomState);
       }
     });
 
@@ -823,7 +826,8 @@ class ChemBlindAppController {
         isOutgoing,
         text: msg.text,
         timeStr: msg.timeStr || '',
-        isCardResponse: Boolean(msg.isCardResponse)
+        isCardResponse: Boolean(msg.isCardResponse),
+        cardPrompt: msg.cardPrompt || ''
       });
 
       if (!isOutgoing && msg.isCardResponse && (!msg.cardId || msg.cardId === this.state?.currentCard?.id)) {
@@ -836,6 +840,25 @@ class ChemBlindAppController {
    * Processes incoming chat message from ChatRoomAPI (via active polling heartbeat or WebSocket).
    * @param {Object} msg
    */
+  /**
+   * Handles guaranteed state synchronization received from active server polling heartbeat.
+   * Ensures both players stay on the exact same card at all times.
+   * @param {Object} roomState
+   */
+  handleRemoteRoomStateSync(roomState) {
+    if (!this.state || !roomState?.current_card_id) return;
+
+    if (this.state.currentCard?.id !== roomState.current_card_id) {
+      this.handleRemoteCardAction({
+        actionType: 'CARD_SYNC',
+        currentCardId: roomState.current_card_id,
+        activePlayerIndex: typeof roomState.active_turn === 'number' && roomState.active_turn >= 1 ? roomState.active_turn - 1 : this.state.activePlayerIndex,
+        chemistryScore: typeof roomState.chemistry_score === 'number' ? roomState.chemistry_score : this.state.chemistryScore,
+        currentLevel: roomState.level || this.state.currentLevel
+      });
+    }
+  }
+
   handleIncomingChatMessage(msg) {
     if (!msg || !msg.text) return;
     const msgId = msg.id || `msg_${msg.timestamp || Date.now()}`;
@@ -851,7 +874,8 @@ class ChemBlindAppController {
       isOutgoing: false,
       text: msg.text,
       timeStr: msg.timeStr || '',
-      isCardResponse: Boolean(msg.isCardResponse)
+      isCardResponse: Boolean(msg.isCardResponse),
+      cardPrompt: msg.cardPrompt || ''
     });
 
     // 2. If it is a card response for the active card, update card quote box
@@ -871,7 +895,7 @@ class ChemBlindAppController {
   }
 
   syncRoomState(actionType) {
-    if (!this.roomSession?.channel || !this.state) return;
+    if (!this.roomSession || !this.state) return;
 
     const payload = {
       actionType,
@@ -883,8 +907,10 @@ class ChemBlindAppController {
       card: this.state.currentCard
     };
 
-    // 1. Instant sub-second Peer-to-Peer synchronization via WebSocket
-    broadcastRoomEvent(this.roomSession.channel, 'CARD_ACTION', payload);
+    // 1. Instant sub-second Peer-to-Peer synchronization via WebSocket (if channel is ready)
+    if (this.roomSession.channel) {
+      broadcastRoomEvent(this.roomSession.channel, 'CARD_ACTION', payload);
+    }
 
     // 2. Direct checkpoint to PostgreSQL for guaranteed delivery
     if (this.roomSession.roomId) {
@@ -1066,7 +1092,12 @@ class ChemBlindAppController {
 
       if (sent) {
         this.renderedMessageIds.add(sent.id);
-        this.ui.addChatMessage({ ...sent, isOutgoing: true, isCardResponse: true });
+        this.ui.addChatMessage({
+          ...sent,
+          isOutgoing: true,
+          isCardResponse: true,
+          cardPrompt
+        });
       }
 
       this.syncRoomState('CARD_RESPONSE');
@@ -1077,7 +1108,8 @@ class ChemBlindAppController {
         isOutgoing: true,
         text,
         timeStr: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isCardResponse: true
+        isCardResponse: true,
+        cardPrompt
       });
       this.ui.showToast('¡Respuesta guardada en la conversación! ✦');
     }
@@ -1095,11 +1127,19 @@ class ChemBlindAppController {
       inputEl.value = '';
     }
 
+    const activePrompt = this.ui.elements.cardPromptText?.textContent || '';
     if (this.roomSession && this.chatAPI) {
-      const sent = await this.chatAPI.sendMessage(text, { isCardResponse: false });
+      const sent = await this.chatAPI.sendMessage(text, {
+        isCardResponse: false,
+        cardPrompt: activePrompt
+      });
       if (sent) {
         this.renderedMessageIds.add(sent.id);
-        this.ui.addChatMessage({ ...sent, isOutgoing: true });
+        this.ui.addChatMessage({
+          ...sent,
+          isOutgoing: true,
+          cardPrompt: activePrompt
+        });
       }
     } else {
       const activePlayer = this.state?.players[this.state.activePlayerIndex];
@@ -1108,7 +1148,8 @@ class ChemBlindAppController {
         isOutgoing: true,
         text,
         timeStr: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isCardResponse: false
+        isCardResponse: false,
+        cardPrompt: activePrompt
       });
     }
   }

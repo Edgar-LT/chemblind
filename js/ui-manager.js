@@ -621,7 +621,7 @@ export class UIManager {
    * @param {string} [options.timeStr]
    * @param {boolean} [options.isCardResponse=false]
    */
-  addChatMessage({ authorName, isOutgoing, text, timeStr, isCardResponse = false }) {
+  addChatMessage({ authorName, isOutgoing, text, timeStr, isCardResponse = false, cardPrompt = '' }) {
     const list = this.elements.chatModalMessages;
     if (!list) return;
 
@@ -641,7 +641,23 @@ export class UIManager {
     const bubbleDiv = document.createElement('div');
     bubbleDiv.className = 'chat-bubble-bubble';
 
-    if (isCardResponse) {
+    // WhatsApp-Style Quoted Question / Prompt Header
+    if (cardPrompt) {
+      const quoteDiv = document.createElement('div');
+      quoteDiv.className = 'chat-quoted-reply';
+
+      const quoteLabel = document.createElement('span');
+      quoteLabel.className = 'chat-quoted-label';
+      quoteLabel.textContent = isCardResponse ? '✦ Respuesta a la carta' : '✦ Pregunta en juego';
+
+      const quoteText = document.createElement('p');
+      quoteText.className = 'chat-quoted-text';
+      quoteText.textContent = `"${cardPrompt}"`;
+
+      quoteDiv.appendChild(quoteLabel);
+      quoteDiv.appendChild(quoteText);
+      bubbleDiv.appendChild(quoteDiv);
+    } else if (isCardResponse) {
       const badge = document.createElement('span');
       badge.className = 'chat-bubble-badge';
       badge.textContent = '✦ Respuesta a la carta';

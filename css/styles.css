@@ -1453,7 +1453,7 @@ textarea {
 /* Hilo de Mensajes con Scroll */
 .chat-modal-messages-feed {
   min-height: 160px;
-  max-height: 280px;
+  max-height: 360px;
   overflow-y: auto;
   padding: 8px 4px;
   display: flex;
@@ -1546,6 +1546,90 @@ textarea {
   color: var(--text-muted);
   margin-top: 2px;
   padding: 0 4px;
+}
+
+
+/* =========================================================================
+   Respuesta Citada Estilo WhatsApp (✦ Pregunta Activa en Burbuja)
+   ========================================================================= */
+.chat-quoted-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  text-align: left;
+  border-left: 3px solid var(--accent-champagne);
+  background: rgba(197, 160, 89, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.chat-quoted-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-champagne);
+}
+
+.chat-quoted-text {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--text-secondary);
+  font-style: italic;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Burbuja saliente (fondo oro): contraste alto con barra oscura */
+.chat-bubble-row.outgoing .chat-quoted-reply {
+  background: rgba(10, 10, 12, 0.12);
+  border-left-color: #0a0a0c;
+}
+
+.chat-bubble-row.outgoing .chat-quoted-label {
+  color: #0a0a0c;
+  opacity: 0.9;
+}
+
+.chat-bubble-row.outgoing .chat-quoted-text {
+  color: rgba(10, 10, 12, 0.8);
+}
+
+/* Modo Claro */
+[data-theme="light"] .chat-bubble-row.incoming .chat-quoted-reply {
+  background: rgba(197, 160, 89, 0.12);
+  border-left-color: var(--accent-champagne);
+}
+
+[data-theme="light"] .chat-bubble-row.incoming .chat-quoted-label {
+  color: #8b6818;
+}
+
+[data-theme="light"] .chat-bubble-row.incoming .chat-quoted-text {
+  color: #4a4a52;
+}
+
+[data-theme="light"] .chat-bubble-row.outgoing .chat-quoted-reply {
+  background: rgba(0, 0, 0, 0.1);
+  border-left-color: #111215;
+}
+
+[data-theme="light"] .chat-bubble-row.outgoing .chat-quoted-label {
+  color: #111215;
+}
+
+[data-theme="light"] .chat-bubble-row.outgoing .chat-quoted-text {
+  color: rgba(17, 18, 21, 0.85);
 }
 
 /* Barra Inferior de Entrada */

@@ -18,7 +18,11 @@ export class ChatRoomAPI {
     this.pollInterval = null;
     this.realtimeChannel = null;
     this.onMessageCallback = null;
+    this.onStateSyncCallback = null;
     this.isPolling = false;
+    this.lastKnownCardId = null;
+    this.lastKnownActiveTurn = null;
+    this.lastKnownLevel = null;
   }
 
   /**
@@ -30,8 +34,9 @@ export class ChatRoomAPI {
    * @param {string} params.authorRole
    * @param {Function} params.onMessage - Called for every incoming or initial message
    * @param {Function} [params.onInitialHistory] - Called with full history array on first load
+   * @param {Function} [params.onStateSync] - Called when server room card/turn/level changes
    */
-  async connect({ roomCode, senderId, authorName, authorRole, onMessage, onInitialHistory }) {
+  async connect({ roomCode, senderId, authorName, authorRole, onMessage, onInitialHistory, onStateSync }) {
     this.disconnect();
 
     this.roomCode = String(roomCode || '').trim().toUpperCase();
@@ -39,24 +44,37 @@ export class ChatRoomAPI {
     this.authorName = authorName;
     this.authorRole = authorRole;
     this.onMessageCallback = onMessage;
+    this.onStateSyncCallback = onStateSync;
 
-    // 1. Fetch initial chat history
+    // 1. Fetch initial room state snapshot & chat history
     try {
-      const initialHistory = await this.fetchHistory();
-      if (Array.isArray(initialHistory)) {
-        initialHistory.forEach((msg) => {
-          if (msg?.id) this.seenMessageIds.add(msg.id);
-        });
-        if (typeof onInitialHistory === 'function') {
-          onInitialHistory(initialHistory);
+      const snapshot = await this.fetchRoomSnapshot();
+      if (snapshot) {
+        if (Array.isArray(snapshot.chat_history)) {
+          snapshot.chat_history.forEach((msg) => {
+            if (msg?.id) this.seenMessageIds.add(msg.id);
+          });
+          if (typeof onInitialHistory === 'function') {
+            onInitialHistory(snapshot.chat_history);
+          }
+        }
+
+        if (snapshot.current_card_id) {
+          this.lastKnownCardId = snapshot.current_card_id;
+          this.lastKnownActiveTurn = snapshot.active_turn;
+          this.lastKnownLevel = snapshot.level;
+
+          if (typeof this.onStateSyncCallback === 'function') {
+            this.onStateSyncCallback(snapshot);
+          }
         }
       }
     } catch (e) {
-      console.warn('[ChatAPI] Error al cargar historial inicial:', e);
+      console.warn('[ChatAPI] Error al cargar estado o historial inicial:', e);
     }
 
     // 2. Start continuous active server polling (every 1.5 seconds)
-    // Constantly checks if the other person sent a message to the server
+    // Constantly checks if messages or active card changed on server
     this.pollInterval = setInterval(() => {
       this.pollNewMessages();
     }, 1500);
@@ -90,16 +108,34 @@ export class ChatRoomAPI {
   }
 
   /**
-   * Active server polling: checks PostgreSQL for new messages and dispatches them.
+   * Active server polling: checks PostgreSQL for new messages and room state changes.
    */
   async pollNewMessages() {
     if (this.isPolling || !this.roomCode) return;
     this.isPolling = true;
 
     try {
-      const messages = await this.fetchHistory();
-      if (Array.isArray(messages)) {
-        messages.forEach((msg) => {
+      const snapshot = await this.fetchRoomSnapshot();
+      if (!snapshot) return;
+
+      // 1. Synchronize card and game state if changed on server
+      const cardChanged = Boolean(snapshot.current_card_id && snapshot.current_card_id !== this.lastKnownCardId);
+      const turnChanged = typeof snapshot.active_turn === 'number' && snapshot.active_turn !== this.lastKnownActiveTurn;
+      const levelChanged = typeof snapshot.level === 'number' && snapshot.level !== this.lastKnownLevel;
+
+      if (cardChanged || turnChanged || levelChanged) {
+        this.lastKnownCardId = snapshot.current_card_id;
+        this.lastKnownActiveTurn = snapshot.active_turn;
+        this.lastKnownLevel = snapshot.level;
+
+        if (typeof this.onStateSyncCallback === 'function') {
+          this.onStateSyncCallback(snapshot);
+        }
+      }
+
+      // 2. Dispatch any new messages in chat_history
+      if (Array.isArray(snapshot.chat_history)) {
+        snapshot.chat_history.forEach((msg) => {
           this.processIncomingMessage(msg);
         });
       }
@@ -111,13 +147,13 @@ export class ChatRoomAPI {
   }
 
   /**
-   * Fetches chat_history directly via ultra-fast REST query.
-   * @returns {Promise<Array<Object>>}
+   * Fetches room snapshot (current_card_id, active_turn, chemistry_score, level, chat_history) via fast REST query.
+   * @returns {Promise<Object|null>}
    */
-  async fetchHistory() {
-    if (!this.roomCode) return [];
+  async fetchRoomSnapshot() {
+    if (!this.roomCode) return null;
     try {
-      const url = `${SUPABASE_URL}/rest/v1/rooms?select=chat_history&code=eq.${encodeURIComponent(this.roomCode)}`;
+      const url = `${SUPABASE_URL}/rest/v1/rooms?select=current_card_id,active_turn,chemistry_score,level,chat_history&code=eq.${encodeURIComponent(this.roomCode)}`;
       const res = await fetch(url, {
         method: 'GET',
         headers: {
@@ -127,12 +163,30 @@ export class ChatRoomAPI {
         }
       });
 
-      if (!res.ok) return [];
+      if (!res.ok) return null;
       const rows = await res.json();
-      return rows[0]?.chat_history || [];
+      const row = rows[0];
+      if (!row) return null;
+
+      return {
+        chat_history: row.chat_history || [],
+        current_card_id: row.current_card_id || null,
+        active_turn: row.active_turn,
+        chemistry_score: row.chemistry_score,
+        level: row.level
+      };
     } catch (e) {
-      return [];
+      return null;
     }
+  }
+
+  /**
+   * Backward-compatible fetchHistory method.
+   * @returns {Promise<Array<Object>>}
+   */
+  async fetchHistory() {
+    const snapshot = await this.fetchRoomSnapshot();
+    return snapshot?.chat_history || [];
   }
 
   /**
@@ -231,6 +285,10 @@ export class ChatRoomAPI {
     }
     this.roomCode = null;
     this.onMessageCallback = null;
+    this.onStateSyncCallback = null;
     this.seenMessageIds.clear();
+    this.lastKnownCardId = null;
+    this.lastKnownActiveTurn = null;
+    this.lastKnownLevel = null;
   }
 }

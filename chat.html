@@ -148,6 +148,59 @@
     .standalone-send-btn:active {
       transform: scale(0.94);
     }
+
+    /* Quoted Reply WhatsApp Style */
+    .chat-quoted-reply {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+      line-height: 1.35;
+      text-align: left;
+      border-left: 3px solid var(--accent-champagne);
+      background: rgba(197, 160, 89, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chat-quoted-label {
+      display: block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-champagne);
+    }
+
+    .chat-quoted-text {
+      margin: 0;
+      font-size: 0.78rem;
+      line-height: 1.35;
+      color: var(--text-secondary);
+      font-style: italic;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-bubble-row.outgoing .chat-quoted-reply {
+      background: rgba(10, 10, 12, 0.12);
+      border-left-color: #0a0a0c;
+    }
+
+    .chat-bubble-row.outgoing .chat-quoted-label {
+      color: #0a0a0c;
+      opacity: 0.9;
+    }
+
+    .chat-bubble-row.outgoing .chat-quoted-text {
+      color: rgba(10, 10, 12, 0.8);
+    }
   </style>
 </head>
 <body>
@@ -190,7 +243,7 @@
   </div>
 
   <script type="module">
-    import { ChatRoomAPI } from './js/chat-service.js?v=2.3.6';
+    import { ChatRoomAPI } from './js/chat-service.js?v=2.3.7';
 
     const params = new URLSearchParams(window.location.search);
     const roomCode = params.get('room') || prompt('Ingresa el código de la sala (Ej: CB-XXXX):') || '';
@@ -222,7 +275,19 @@
       const bubble = document.createElement('div');
       bubble.className = 'chat-bubble-bubble';
 
-      if (msg.isCardResponse) {
+      if (msg.cardPrompt) {
+        const quote = document.createElement('div');
+        quote.className = 'chat-quoted-reply';
+        const label = document.createElement('span');
+        label.className = 'chat-quoted-label';
+        label.textContent = msg.isCardResponse ? '✦ Respuesta a la carta' : '✦ Pregunta en juego';
+        const p = document.createElement('p');
+        p.className = 'chat-quoted-text';
+        p.textContent = `"${msg.cardPrompt}"`;
+        quote.appendChild(label);
+        quote.appendChild(p);
+        bubble.appendChild(quote);
+      } else if (msg.isCardResponse) {
         const badge = document.createElement('span');
         badge.className = 'chat-bubble-badge';
         badge.textContent = '✦ Respuesta a la carta';
