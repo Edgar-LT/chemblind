@@ -123,7 +123,32 @@ export function createCustomCard({
 }
 
 /**
+ * Deterministically picks an initial card for a newly created room.
+ * Ensures both players start on the exact same card.
+ * @param {string} gameMode
+ * @param {number} level
+ * @param {Array<Object>} [customCards]
+ * @returns {Object}
+ */
+export function pickInitialCard(gameMode, level, customCards = []) {
+  const allCards = [...customCards, ...DEFAULT_CARDS];
+  const candidates = allCards.filter((card) => {
+    const matchesLevel = card.level === Number(level);
+    const cardModes = Array.isArray(card.modes)
+      ? card.modes
+      : [GAME_MODES.PRESENCIAL, GAME_MODES.ONLINE];
+    const matchesMode = cardModes.includes(gameMode);
+    return matchesLevel && matchesMode;
+  });
+
+  const list = candidates.length > 0 ? candidates : DEFAULT_CARDS;
+  const pickedIndex = Math.floor(Math.random() * list.length);
+  return list[pickedIndex] || DEFAULT_CARDS[0];
+}
+
+/**
  * Creates a fresh, deterministic initial game state.
+ * Supports passing `initialCardId` so both multiplayer sessions guarantee the same card.
  */
 export function createInitialGameState(options = {}) {
   const playerOne = sanitizeString(options.playerOne, 28, 'Jugador 1');
@@ -137,6 +162,12 @@ export function createInitialGameState(options = {}) {
     : INTENSITY_LEVELS.ICEBREAKER;
   const customCards = Array.isArray(options.customCards) ? [...options.customCards] : [];
 
+  let initialCard = null;
+  if (options.initialCardId) {
+    const allPool = [...customCards, ...DEFAULT_CARDS];
+    initialCard = allPool.find((c) => c.id === options.initialCardId) || null;
+  }
+
   const baseState = {
     players: [
       { id: 0, name: playerOne, wildcards: INITIAL_WILDCARDS },
@@ -149,8 +180,15 @@ export function createInitialGameState(options = {}) {
     turnCount: 1,
     completedCardIds: [],
     customCards,
-    currentCard: null
+    currentCard: initialCard
   };
+
+  if (initialCard) {
+    return {
+      ...baseState,
+      completedCardIds: [initialCard.id]
+    };
+  }
 
   return drawNextCard(baseState, { advanceTurn: false });
 }

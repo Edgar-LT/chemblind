@@ -15,7 +15,8 @@ import {
   useWildcardSkip,
   setIntensityLevel,
   addCustomCardToState,
-  clampNumber
+  clampNumber,
+  pickInitialCard
 } from './engine.js';
 
 import {
@@ -542,6 +543,8 @@ class ChemBlindAppController {
     }
 
     try {
+      const startingCard = pickInitialCard(selectedMode, initialLevel, this.savedCustomCards);
+
       const roomResult = await createGameRoom({
         playerName: p1,
         mode: selectedMode,
@@ -551,6 +554,13 @@ class ChemBlindAppController {
       if (!roomResult.success) {
         this.ui.showToast(roomResult.error || 'Error al crear la sala');
         return;
+      }
+
+      // Pre-set initial card in PostgreSQL so guest instantly loads the exact same card
+      if (roomResult.roomId) {
+        updateRoomRecord(roomResult.roomId, {
+          current_card_id: startingCard.id
+        }, roomResult.hostToken);
       }
 
       const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${roomResult.code}&key=${roomResult.accessToken}`;
@@ -563,7 +573,8 @@ class ChemBlindAppController {
         inviteUrl,
         mode: selectedMode,
         level: initialLevel,
-        p1Name: p1
+        p1Name: p1,
+        startingCardId: startingCard.id
       };
 
       this.ui.showScreen('waiting');
@@ -636,6 +647,7 @@ class ChemBlindAppController {
         playerTwo: guestName,
         gameMode: joinResult.mode,
         initialLevel: joinResult.level,
+        initialCardId: joinResult.current_card_id,
         customCards: this.savedCustomCards
       });
 
@@ -676,6 +688,7 @@ class ChemBlindAppController {
               playerTwo: p2Name,
               gameMode: this.roomSession.mode,
               initialLevel: this.roomSession.level,
+              initialCardId: this.roomSession.startingCardId || payload.currentCardId,
               customCards: this.savedCustomCards
             });
 
@@ -683,9 +696,28 @@ class ChemBlindAppController {
             this.syncTimerWithCurrentCard();
             this.ui.renderGameStage(this.state, this.roomSession);
             this.ui.showToast(`¡${p2Name} se ha conectado a la sala!`);
+            this.persistLocalSession();
+
+            // Broadcast immediate sync to guarantee guest is on the exact same card
+            broadcastRoomEvent(this.roomSession.channel, 'CARD_ACTION', {
+              actionType: 'CARD_SYNC',
+              currentCardId: this.state.currentCard.id,
+              activePlayerIndex: this.state.activePlayerIndex,
+              turnCount: this.state.turnCount,
+              chemistryScore: this.state.chemistryScore,
+              currentLevel: this.state.currentLevel
+            });
           } else {
-            // Partner reconnected: gentle toast without disrupting active game or wiping drafts
+            // Partner reconnected: gentle toast and confirm current card
             this.ui.showToast(`¡${p2Name} se ha reconectado!`);
+            broadcastRoomEvent(this.roomSession.channel, 'CARD_ACTION', {
+              actionType: 'CARD_SYNC',
+              currentCardId: this.state.currentCard.id,
+              activePlayerIndex: this.state.activePlayerIndex,
+              turnCount: this.state.turnCount,
+              chemistryScore: this.state.chemistryScore,
+              currentLevel: this.state.currentLevel
+            });
           }
         }
       },
