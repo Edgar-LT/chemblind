@@ -91,7 +91,7 @@ export function getSessionClientId() {
  * @param {number} params.level - 1, 2, 3
  * @returns {Promise<{ success: boolean, code?: string, accessToken?: string, hostToken?: string, error?: string, offline?: boolean }>}
  */
-export async function createGameRoom({ playerName, mode, level }) {
+export async function createGameRoom({ playerName, mode, level, initialCardId = null }) {
   const supabase = getSupabase();
   if (!supabase) {
     return {
@@ -108,7 +108,8 @@ export async function createGameRoom({ playerName, mode, level }) {
       p_client_id: clientId,
       p_player_name: playerName,
       p_mode: mode || 'online',
-      p_level: Number(level) || 1
+      p_level: Number(level) || 1,
+      p_initial_card_id: initialCardId
     });
 
     if (error) {
@@ -253,7 +254,7 @@ export function subscribeToRoomChannel(roomCode, { onStateUpdate, onPlayerJoined
     const channel = supabase
       .channel(channelName, {
         config: {
-          broadcast: { ack: true, self: false }
+          broadcast: { ack: false, self: false }
         }
       })
       .on(
@@ -389,12 +390,7 @@ export function updateRoomRecord(roomId, fields, hostToken = null) {
   const supabase = getSupabase();
   if (!supabase || !roomId) return;
 
-  if (updateDebounceTimers.has(roomId)) {
-    clearTimeout(updateDebounceTimers.get(roomId));
-  }
-
-  const timer = setTimeout(async () => {
-    updateDebounceTimers.delete(roomId);
+  (async () => {
     try {
       let query = supabase
         .from('rooms')
@@ -412,9 +408,7 @@ export function updateRoomRecord(roomId, fields, hostToken = null) {
     } catch (err) {
       console.warn('[ChemBlind/Supabase] Error en updateRoomRecord:', err);
     }
-  }, 250);
-
-  updateDebounceTimers.set(roomId, timer);
+  })();
 }
 
 /**

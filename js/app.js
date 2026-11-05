@@ -381,7 +381,8 @@ class ChemBlindAppController {
       mode: roomData.mode,
       level: roomData.level || 1,
       p1Name: roomData.player_one_name,
-      p2Name: roomData.player_two_name
+      p2Name: roomData.player_two_name,
+      startingCardId: roomData.current_card_id
     };
 
     if (!roomData.player_two_joined) {
@@ -490,16 +491,17 @@ class ChemBlindAppController {
     const localSnapshot = this.restoreLocalSessionSnapshot(roomData.code);
 
     const initialLevel = localSnapshot?.currentLevel || roomData.level || 1;
+    const targetCardId = localSnapshot?.currentCardId || roomData.current_card_id;
 
     this.state = createInitialGameState({
       playerOne: roomData.player_one_name,
       playerTwo: guestName,
       gameMode: roomData.mode,
       initialLevel,
+      initialCardId: targetCardId,
       customCards: this.savedCustomCards
     });
 
-    const targetCardId = localSnapshot?.currentCardId || roomData.current_card_id;
     if (targetCardId) {
       const allCards = [...this.savedCustomCards, ...DEFAULT_CARDS];
       const foundCard = allCards.find((c) => c.id === targetCardId);
@@ -564,7 +566,8 @@ class ChemBlindAppController {
       const roomResult = await createGameRoom({
         playerName: p1,
         mode: selectedMode,
-        level: initialLevel
+        level: initialLevel,
+        initialCardId: startingCard.id
       });
 
       if (!roomResult.success) {
@@ -670,7 +673,8 @@ class ChemBlindAppController {
       this.connectToRealtimeRoom(joinResult.code);
 
       broadcastRoomEvent(this.roomSession.channel, 'PLAYER_JOINED', {
-        playerTwoName: guestName
+        playerTwoName: guestName,
+        currentCardId: this.state.currentCard?.id
       });
 
       this.ui.showScreen('game');
@@ -697,6 +701,7 @@ class ChemBlindAppController {
         if (this.roomSession.role === 'player_one') {
           const p2Name = payload.playerTwoName || 'Tu pareja';
           this.roomSession.p2Name = p2Name;
+          const startingId = this.roomSession.startingCardId || payload.currentCardId;
 
           if (!this.state) {
             this.state = createInitialGameState({
@@ -704,7 +709,7 @@ class ChemBlindAppController {
               playerTwo: p2Name,
               gameMode: this.roomSession.mode,
               initialLevel: this.roomSession.level,
-              initialCardId: this.roomSession.startingCardId || payload.currentCardId,
+              initialCardId: startingId,
               customCards: this.savedCustomCards
             });
 
@@ -718,6 +723,7 @@ class ChemBlindAppController {
             broadcastRoomEvent(this.roomSession.channel, 'CARD_ACTION', {
               actionType: 'CARD_SYNC',
               currentCardId: this.state.currentCard.id,
+              card: this.state.currentCard,
               activePlayerIndex: this.state.activePlayerIndex,
               turnCount: this.state.turnCount,
               chemistryScore: this.state.chemistryScore,
@@ -729,6 +735,7 @@ class ChemBlindAppController {
             broadcastRoomEvent(this.roomSession.channel, 'CARD_ACTION', {
               actionType: 'CARD_SYNC',
               currentCardId: this.state.currentCard.id,
+              card: this.state.currentCard,
               activePlayerIndex: this.state.activePlayerIndex,
               turnCount: this.state.turnCount,
               chemistryScore: this.state.chemistryScore,
@@ -739,10 +746,6 @@ class ChemBlindAppController {
       },
       onCardAction: (payload) => {
         if (!this.state || !payload) return;
-        // Anti-Split-Brain: discard stale packets with older turn counts
-        if (payload.turnCount && payload.turnCount < this.state.turnCount) {
-          return;
-        }
         this.handleRemoteCardAction(payload);
       },
       onCardResponse: (payload) => {
@@ -759,6 +762,17 @@ class ChemBlindAppController {
             this.syncTimerWithCurrentCard();
             this.ui.renderGameStage(this.state, this.roomSession);
           }
+        }
+
+        // Card & Turn Synchronization fallback via PostgreSQL Realtime replication
+        if (this.state && newRecord.current_card_id && (!this.state.currentCard || this.state.currentCard.id !== newRecord.current_card_id)) {
+          this.handleRemoteCardAction({
+            actionType: 'CARD_SYNC',
+            currentCardId: newRecord.current_card_id,
+            activePlayerIndex: typeof newRecord.active_turn === 'number' && newRecord.active_turn >= 1 ? newRecord.active_turn - 1 : this.state.activePlayerIndex,
+            chemistryScore: typeof newRecord.chemistry_score === 'number' ? newRecord.chemistry_score : this.state.chemistryScore,
+            currentLevel: newRecord.level || this.state.currentLevel
+          });
         }
 
         // Guaranteed delivery fallback: sync persistent messages from PostgreSQL
@@ -863,13 +877,14 @@ class ChemBlindAppController {
       turnCount: this.state.turnCount,
       chemistryScore: this.state.chemistryScore,
       currentLevel: this.state.currentLevel,
-      currentCardId: this.state.currentCard?.id
+      currentCardId: this.state.currentCard?.id,
+      card: this.state.currentCard
     };
 
     // 1. Instant sub-second Peer-to-Peer synchronization via WebSocket
     broadcastRoomEvent(this.roomSession.channel, 'CARD_ACTION', payload);
 
-    // 2. Debounced background checkpoint to PostgreSQL (eliminates write amplification)
+    // 2. Direct checkpoint to PostgreSQL for guaranteed delivery
     if (this.roomSession.roomId) {
       updateRoomRecord(this.roomSession.roomId, {
         active_turn: this.state.activePlayerIndex + 1,
@@ -961,7 +976,19 @@ class ChemBlindAppController {
     const isSameCard = this.state?.currentCard?.id === payload.currentCardId;
 
     const allCards = [...this.state.customCards, ...DEFAULT_CARDS];
-    const targetCard = allCards.find((c) => c.id === payload.currentCardId);
+    let targetCard = allCards.find((c) => c.id === payload.currentCardId);
+
+    if (!targetCard && payload.card) {
+      targetCard = payload.card;
+      if (!this.state.customCards.some((c) => c.id === targetCard.id)) {
+        this.state.customCards = [targetCard, ...this.state.customCards];
+      }
+    }
+
+    if (!targetCard) {
+      console.warn('[ChemBlind] Carta no encontrada en baraja:', payload.currentCardId);
+      return;
+    }
 
     this.state = {
       ...this.state,
@@ -969,7 +996,7 @@ class ChemBlindAppController {
       turnCount: Math.max(this.state.turnCount, payload.turnCount || 0),
       chemistryScore: payload.chemistryScore ?? this.state.chemistryScore,
       currentLevel: payload.currentLevel || this.state.currentLevel,
-      currentCard: targetCard || this.state.currentCard
+      currentCard: targetCard
     };
 
     this.persistLocalSession();
