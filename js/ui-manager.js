@@ -98,19 +98,17 @@ export class UIManager {
       responseDisplayText: byId('response-display-text'),
       editResponseBtn: byId('edit-response-btn'),
       responseStatusBadge: byId('response-status-badge'),
+      openChatModalBtn: byId('open-chat-modal-btn'),
 
-      // Facebook-style Chat Widget & Floating Launcher
-      fbChatWidget: byId('fb-chat-widget'),
-      fbChatPartnerName: byId('fb-chat-partner-name'),
-      fbChatMinimizeBtn: byId('fb-chat-minimize-btn'),
-      fbChatCloseBtn: byId('fb-chat-close-btn'),
-      fbChatCardPrompt: byId('fb-chat-card-prompt'),
-      fbChatMessages: byId('fb-chat-messages'),
-      fbChatForm: byId('fb-chat-form'),
-      fbChatInput: byId('fb-chat-input'),
-      fbChatSendBtn: byId('fb-chat-send-btn'),
-      floatingChatTrigger: byId('floating-chat-trigger'),
-      chatUnreadBadge: byId('chat-unread-badge'),
+      // Realtime Conversation Modal (Facebook Messenger / Haute Horlogerie Style)
+      chatConversationModal: byId('chat-conversation-modal'),
+      chatModalPartnerName: byId('chat-modal-partner-name'),
+      closeChatModalBtn: byId('close-chat-modal-btn'),
+      chatModalCardPrompt: byId('chat-modal-card-prompt'),
+      chatModalMessages: byId('chat-modal-messages'),
+      chatModalForm: byId('chat-modal-form'),
+      chatModalInput: byId('chat-modal-input'),
+      chatModalSendBtn: byId('chat-modal-send-btn'),
 
       // Custom Card Modal
       customCardModal: byId('custom-card-modal'),
@@ -167,8 +165,7 @@ export class UIManager {
       this.elements.guestJoinForm?.classList.add('is-hidden');
       this.elements.changePlayersBtn?.classList.add('is-hidden');
       this.elements.openCustomModalBtn?.classList.add('is-hidden');
-      this.elements.floatingChatTrigger?.classList.add('is-hidden');
-      this.setChatWidgetOpen(false);
+      this.setChatModalOpen(false);
     } else if (screen === 'guest-join') {
       this.elements.onboardingScreen?.classList.remove('is-hidden');
       this.elements.onboardingForm?.classList.add('is-hidden');
@@ -177,19 +174,16 @@ export class UIManager {
       this.elements.openCustomModalBtn?.classList.add('is-hidden');
       this.elements.viewRoomsBtn?.classList.add('is-hidden');
       this.elements.activeRoomsBanner?.classList.add('is-hidden');
-      this.elements.floatingChatTrigger?.classList.add('is-hidden');
-      this.setChatWidgetOpen(false);
+      this.setChatModalOpen(false);
     } else if (screen === 'waiting') {
       this.elements.roomWaitingScreen?.classList.remove('is-hidden');
       this.elements.changePlayersBtn?.classList.add('is-hidden');
       this.elements.openCustomModalBtn?.classList.add('is-hidden');
-      this.elements.floatingChatTrigger?.classList.add('is-hidden');
-      this.setChatWidgetOpen(false);
+      this.setChatModalOpen(false);
     } else if (screen === 'game') {
       this.elements.gameScreen?.classList.remove('is-hidden');
       this.elements.changePlayersBtn?.classList.remove('is-hidden');
       this.elements.openCustomModalBtn?.classList.remove('is-hidden');
-      this.elements.floatingChatTrigger?.classList.remove('is-hidden');
     }
   }
 
@@ -520,39 +514,30 @@ export class UIManager {
   }
 
   /**
-   * Opens or minimizes the Facebook-style chat window widget.
+   * Opens or closes the Facebook-style conversation modal.
    * @param {boolean} isOpen
    */
-  setChatWidgetOpen(isOpen) {
-    const widget = this.elements.fbChatWidget;
-    if (!widget) return;
+  setChatModalOpen(isOpen) {
+    const modal = this.elements.chatConversationModal;
+    if (!modal) return;
 
+    modal.classList.toggle('is-open', isOpen);
     if (isOpen) {
-      widget.classList.remove('is-closed');
-      this.setChatUnreadCount(0);
-      if (this.elements.floatingChatTrigger) {
-        this.elements.floatingChatTrigger.style.display = 'none';
-      }
       setTimeout(() => {
-        this.elements.fbChatInput?.focus();
-        if (this.elements.fbChatMessages) {
-          this.elements.fbChatMessages.scrollTop = this.elements.fbChatMessages.scrollHeight;
+        this.elements.chatModalInput?.focus();
+        if (this.elements.chatModalMessages) {
+          this.elements.chatModalMessages.scrollTop = this.elements.chatModalMessages.scrollHeight;
         }
-      }, 50);
-    } else {
-      widget.classList.add('is-closed');
-      if (this.elements.floatingChatTrigger && !this.elements.gameScreen?.classList.contains('is-hidden')) {
-        this.elements.floatingChatTrigger.style.display = 'inline-flex';
-      }
+      }, 60);
     }
   }
 
   /**
-   * Returns whether the chat window is currently visible.
+   * Returns whether the chat modal is currently visible.
    * @returns {boolean}
    */
-  isChatWidgetOpen() {
-    return Boolean(this.elements.fbChatWidget && !this.elements.fbChatWidget.classList.contains('is-closed'));
+  isChatModalOpen() {
+    return Boolean(this.elements.chatConversationModal?.classList.contains('is-open'));
   }
 
   /**
@@ -560,34 +545,18 @@ export class UIManager {
    * @param {string} name
    */
   setChatPartnerName(name) {
-    if (this.elements.fbChatPartnerName) {
-      this.elements.fbChatPartnerName.textContent = name || 'Tu Pareja';
+    if (this.elements.chatModalPartnerName) {
+      this.elements.chatModalPartnerName.textContent = name || 'Tu Cita';
     }
   }
 
   /**
-   * Updates the card context bar in the chat window.
+   * Updates the card context bar in the chat modal.
    * @param {string} promptText
    */
   setChatCardPrompt(promptText) {
-    if (this.elements.fbChatCardPrompt) {
-      this.elements.fbChatCardPrompt.textContent = promptText || 'Selecciona una carta para conversar.';
-    }
-  }
-
-  /**
-   * Updates the unread counter badge on the floating chat launcher.
-   * @param {number} count
-   */
-  setChatUnreadCount(count) {
-    const badge = this.elements.chatUnreadBadge;
-    if (!badge) return;
-    if (count > 0) {
-      badge.textContent = String(count);
-      badge.classList.remove('is-hidden');
-    } else {
-      badge.textContent = '0';
-      badge.classList.add('is-hidden');
+    if (this.elements.chatModalCardPrompt) {
+      this.elements.chatModalCardPrompt.textContent = promptText || 'Selecciona una carta para conversar.';
     }
   }
 
@@ -601,38 +570,38 @@ export class UIManager {
    * @param {boolean} [options.isCardResponse=false]
    */
   addChatMessage({ authorName, isOutgoing, text, timeStr, isCardResponse = false }) {
-    const list = this.elements.fbChatMessages;
+    const list = this.elements.chatModalMessages;
     if (!list) return;
 
-    const emptyHint = list.querySelector('.fb-chat-empty-hint');
+    const emptyHint = list.querySelector('.chat-empty-state');
     if (emptyHint) {
       emptyHint.remove();
     }
 
     const row = document.createElement('div');
-    row.className = `fb-bubble-row ${isOutgoing ? 'outgoing' : 'incoming'}`;
+    row.className = `chat-bubble-row ${isOutgoing ? 'outgoing' : 'incoming'}`;
 
     const authorSpan = document.createElement('span');
-    authorSpan.className = 'fb-bubble-author';
+    authorSpan.className = 'chat-bubble-author';
     authorSpan.textContent = authorName || (isOutgoing ? 'Tú' : 'Tu Cita');
     row.appendChild(authorSpan);
 
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'fb-bubble-content';
+    const bubbleDiv = document.createElement('div');
+    bubbleDiv.className = 'chat-bubble-bubble';
 
     if (isCardResponse) {
       const badge = document.createElement('span');
-      badge.className = 'fb-bubble-badge';
+      badge.className = 'chat-bubble-badge';
       badge.textContent = '✦ Respuesta a la carta';
-      contentDiv.appendChild(badge);
+      bubbleDiv.appendChild(badge);
     }
 
     const textNode = document.createTextNode(text);
-    contentDiv.appendChild(textNode);
-    row.appendChild(contentDiv);
+    bubbleDiv.appendChild(textNode);
+    row.appendChild(bubbleDiv);
 
     const timeSpan = document.createElement('span');
-    timeSpan.className = 'fb-bubble-time';
+    timeSpan.className = 'chat-bubble-time';
     timeSpan.textContent = timeStr || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     row.appendChild(timeSpan);
 

@@ -246,22 +246,22 @@ class ChemBlindAppController {
       this.ui.showResponseInput(currentText);
     });
 
-    // Facebook-style Chat Widget Controls
-    el.floatingChatTrigger?.addEventListener('click', () => {
-      this.unreadChatCount = 0;
-      this.ui.setChatUnreadCount(0);
-      this.ui.setChatWidgetOpen(true);
+    // Conversation Chat Modal Controls
+    el.openChatModalBtn?.addEventListener('click', () => {
+      this.ui.setChatModalOpen(true);
     });
 
-    el.fbChatMinimizeBtn?.addEventListener('click', () => {
-      this.ui.setChatWidgetOpen(false);
+    el.closeChatModalBtn?.addEventListener('click', () => {
+      this.ui.setChatModalOpen(false);
     });
 
-    el.fbChatCloseBtn?.addEventListener('click', () => {
-      this.ui.setChatWidgetOpen(false);
+    el.chatConversationModal?.addEventListener('click', (e) => {
+      if (e.target === el.chatConversationModal) {
+        this.ui.setChatModalOpen(false);
+      }
     });
 
-    el.fbChatForm?.addEventListener('submit', (e) => {
+    el.chatModalForm?.addEventListener('submit', (e) => {
       e.preventDefault();
       this.handleSendChatMessage();
     });
@@ -672,8 +672,8 @@ class ChemBlindAppController {
           isCardResponse: Boolean(payload.isCardResponse)
         });
 
-        // 3. Just like Facebook Messenger: automatically pop open the chat window!
-        this.ui.setChatWidgetOpen(true);
+        // 3. Just like Facebook Messenger: automatically pop open the conversation modal!
+        this.ui.setChatModalOpen(true);
 
         // 4. Affinity score & toast
         if (typeof payload.chemistryScore === 'number' && this.state) {
@@ -791,8 +791,8 @@ class ChemBlindAppController {
       isCardResponse: true
     });
 
-    // 3. Automatically open the Facebook chat window on screen
-    this.ui.setChatWidgetOpen(true);
+    // 3. Automatically open the conversation chat modal on screen
+    this.ui.setChatModalOpen(true);
 
     // 4. Chemistry affinity bonus (+3%)
     const newScore = Math.min(100, (this.state.chemistryScore || 0) + 3);
@@ -817,15 +817,15 @@ class ChemBlindAppController {
       this.syncRoomState('CARD_RESPONSE');
       this.ui.showToast('¡Respuesta enviada a tu cita! ✦');
     } else {
-      this.ui.showToast('¡Respuesta guardada en el chat! ✦');
+      this.ui.showToast('¡Respuesta guardada en la conversación! ✦');
     }
   }
 
   /**
-   * Handles sending a direct chat message from the Facebook-style widget.
+   * Handles sending a direct chat message from the conversation modal.
    */
   handleSendChatMessage() {
-    const inputEl = this.ui.elements.fbChatInput;
+    const inputEl = this.ui.elements.chatModalInput;
     const text = inputEl ? inputEl.value.trim() : '';
     if (!text) return;
 
