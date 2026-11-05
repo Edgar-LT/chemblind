@@ -76,6 +76,9 @@ class ChemBlindAppController {
   async init() {
     this.loadStoredPreferences();
     this.bindEvents();
+    // Synchronize initial session type with DOM
+    const initialSessionType = document.querySelector('input[name="sessionType"]:checked');
+    this.ui.setSessionType(initialSessionType?.value === 'room');
     await this.refreshActiveRooms();
     await this.checkUrlInvitation();
   }
@@ -136,6 +139,17 @@ class ChemBlindAppController {
       });
     });
 
+    // Explicit delegation on cards to guarantee click propagation on any browser/device
+    document.querySelectorAll('.setup-mode-option').forEach((card) => {
+      card.addEventListener('click', () => {
+        const radio = card.querySelector('input[name="sessionType"]');
+        if (radio && !radio.checked) {
+          radio.checked = true;
+          radio.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+    });
+
     // Forms
     el.onboardingForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -182,6 +196,8 @@ class ChemBlindAppController {
       this.chrono.stop();
       this.ui.showScreen('onboarding');
       window.history.replaceState({}, document.title, window.location.pathname);
+      const isRoom = document.querySelector('input[name="sessionType"]:checked')?.value === 'room';
+      this.ui.setSessionType(Boolean(isRoom));
     });
 
     // Intensity Level Tabs

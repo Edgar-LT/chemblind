@@ -663,8 +663,14 @@ textarea {
 
 .setup-mode-option input {
   position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
   opacity: 0;
-  pointer-events: none;
 }
 
 .setup-mode-box {
@@ -733,8 +739,14 @@ textarea {
 
 .setup-level-option input {
   position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
   opacity: 0;
-  pointer-events: none;
 }
 
 .setup-level-box {
@@ -1281,7 +1293,7 @@ textarea {
   background: rgba(10, 10, 12, 0.72);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  display: grid;
+  display: none;
   place-items: center;
   padding: 20px;
   opacity: 0;
@@ -1290,6 +1302,7 @@ textarea {
 }
 
 .modal-backdrop.is-open {
+  display: grid !important;
   opacity: 1;
   pointer-events: auto;
 }

@@ -14,7 +14,7 @@
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <link rel="stylesheet" href="./css/styles.css?v=2.3.2" />
+  <link rel="stylesheet" href="./css/styles.css?v=2.3.3" />
 </head>
 <body>
 
@@ -445,7 +445,7 @@
   <!-- =================================================================
        MODAL: CREAR PREGUNTA O RETO PERSONALIZADO (Bajo Demanda)
        ================================================================= -->
-  <div id="custom-card-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="custom-modal-title">
+  <div id="custom-card-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="custom-modal-title" style="display: none;">
     <div class="modal-dialog">
       <div class="modal-header">
         <span id="custom-modal-title" class="eyebrow-label" style="margin-bottom: 0;">Añadir Carta a Medida</span>
@@ -498,7 +498,7 @@
   </div>
 
   <!-- Modal: Mis Salas Activas (Visualizar, Cambiar y Cerrar) -->
-  <div id="active-rooms-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="rooms-modal-title">
+  <div id="active-rooms-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="rooms-modal-title" style="display: none;">
     <div class="modal-dialog" style="max-width: 540px;">
       <div class="modal-header">
         <span id="rooms-modal-title" class="eyebrow-label" style="margin-bottom: 0;">Salas Activas de tu Dispositivo</span>
@@ -523,7 +523,7 @@
   <!-- =================================================================
        MODAL DE CONVERSACIÓN / CHAT EN VIVO (ESTILO MESSENGER & ALTA RELOJERÍA)
        ================================================================= -->
-  <div id="chat-conversation-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="chat-modal-partner-name">
+  <div id="chat-conversation-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="chat-modal-partner-name" style="display: none;">
     <div class="modal-dialog chat-modal-dialog">
       <!-- Cabecera del Chat -->
       <div class="modal-header chat-modal-header">
@@ -580,6 +580,6 @@
   <!-- Notificación Toast Discreta -->
   <div id="toast-notification" class="toast-notification" role="status" aria-live="polite"></div>
 
-  <script type="module" src="./js/app.js?v=2.3.2"></script>
+  <script type="module" src="./js/app.js?v=2.3.3"></script>
 </body>
 </html>

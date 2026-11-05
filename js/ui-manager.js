@@ -196,9 +196,18 @@ export class UIManager {
 
   setSessionType(isRoom) {
     if (this.elements.setupP2Container) {
-      this.elements.setupP2Container.style.display = isRoom ? 'none' : 'flex';
+      if (isRoom) {
+        this.elements.setupP2Container.classList.add('is-hidden');
+        this.elements.setupP2Container.style.setProperty('display', 'none', 'important');
+      } else {
+        this.elements.setupP2Container.classList.remove('is-hidden');
+        this.elements.setupP2Container.style.removeProperty('display');
+      }
       if (this.elements.setupP2Input) {
         this.elements.setupP2Input.required = !isRoom;
+        if (isRoom) {
+          this.elements.setupP2Input.value = '';
+        }
       }
     }
     if (this.elements.playersInputRow) {
@@ -507,16 +516,32 @@ export class UIManager {
   }
 
   setRoomsModalOpen(isOpen) {
-    this.elements.activeRoomsModal?.classList.toggle('is-open', isOpen);
+    const modal = this.elements.activeRoomsModal;
+    if (!modal) return;
+    if (isOpen) {
+      modal.style.display = 'grid';
+      void modal.offsetWidth;
+      modal.classList.add('is-open');
+    } else {
+      modal.classList.remove('is-open');
+      modal.style.display = 'none';
+    }
   }
 
   setCustomCardModalOpen(isOpen, currentLevel = 1) {
-    if (isOpen && this.elements.customLevelSelect) {
-      this.elements.customLevelSelect.value = String(currentLevel);
-    }
-    this.elements.customCardModal?.classList.toggle('is-open', isOpen);
+    const modal = this.elements.customCardModal;
+    if (!modal) return;
     if (isOpen) {
+      if (this.elements.customLevelSelect) {
+        this.elements.customLevelSelect.value = String(currentLevel);
+      }
+      modal.style.display = 'grid';
+      void modal.offsetWidth;
+      modal.classList.add('is-open');
       this.elements.customPromptInput?.focus();
+    } else {
+      modal.classList.remove('is-open');
+      modal.style.display = 'none';
     }
   }
 
@@ -528,14 +553,19 @@ export class UIManager {
     const modal = this.elements.chatConversationModal;
     if (!modal) return;
 
-    modal.classList.toggle('is-open', isOpen);
     if (isOpen) {
+      modal.style.display = 'grid';
+      void modal.offsetWidth;
+      modal.classList.add('is-open');
       setTimeout(() => {
         this.elements.chatModalInput?.focus();
         if (this.elements.chatModalMessages) {
           this.elements.chatModalMessages.scrollTop = this.elements.chatModalMessages.scrollHeight;
         }
       }, 60);
+    } else {
+      modal.classList.remove('is-open');
+      modal.style.display = 'none';
     }
   }
 
