@@ -99,6 +99,14 @@ export class UIManager {
       editResponseBtn: byId('edit-response-btn'),
       responseStatusBadge: byId('response-status-badge'),
 
+      // Partner Response Modal (Live incoming answer)
+      partnerResponseModal: byId('partner-response-modal'),
+      closeResponseModalBtn: byId('close-response-modal-btn'),
+      ackResponseModalBtn: byId('ack-response-modal-btn'),
+      responseModalAuthorName: byId('response-modal-author-name'),
+      responseModalCardPrompt: byId('response-modal-card-prompt'),
+      responseModalText: byId('response-modal-text'),
+
       // Custom Card Modal
       customCardModal: byId('custom-card-modal'),
       closeCustomModalBtn: byId('close-custom-modal-btn'),
@@ -305,6 +313,7 @@ export class UIManager {
     if (this.elements.editResponseBtn) {
       this.elements.editResponseBtn.style.display = '';
     }
+    this.setPartnerResponseModalOpen(false);
   }
 
   /**
@@ -488,6 +497,34 @@ export class UIManager {
     this.elements.customCardModal?.classList.toggle('is-open', isOpen);
     if (isOpen) {
       this.elements.customPromptInput?.focus();
+    }
+  }
+
+  /**
+   * Opens or closes the intimate live response modal when a partner sends an answer.
+   * @param {boolean} isOpen
+   * @param {Object} [data]
+   * @param {string} [data.authorName]
+   * @param {string} [data.text]
+   * @param {string} [data.cardPrompt]
+   */
+  setPartnerResponseModalOpen(isOpen, { authorName, text, cardPrompt } = {}) {
+    const modal = this.elements.partnerResponseModal;
+    if (!modal) return;
+
+    if (isOpen) {
+      if (this.elements.responseModalAuthorName && authorName) {
+        this.elements.responseModalAuthorName.textContent = `Respuesta de ${authorName}`;
+      }
+      if (this.elements.responseModalText && text) {
+        this.elements.responseModalText.textContent = text;
+      }
+      if (this.elements.responseModalCardPrompt) {
+        this.elements.responseModalCardPrompt.textContent = cardPrompt || '';
+      }
+      modal.classList.add('is-open');
+    } else {
+      modal.classList.remove('is-open');
     }
   }
 

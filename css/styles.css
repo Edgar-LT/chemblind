@@ -286,6 +286,31 @@
   box-shadow: 0 12px 48px -12px rgba(17, 18, 21, 0.18);
 }
 
+[data-theme="light"] .partner-response-dialog {
+  background: #ffffff;
+  border: 1px solid rgba(143, 97, 32, 0.38);
+  box-shadow: 0 16px 52px -12px rgba(17, 18, 21, 0.18);
+}
+
+[data-theme="light"] .partner-modal-card-box {
+  background: #f6f6f9;
+  border: 1px solid rgba(17, 18, 21, 0.09);
+}
+
+[data-theme="light"] .partner-modal-card-text {
+  color: #4b4d54;
+}
+
+[data-theme="light"] .partner-modal-quote-box {
+  background: linear-gradient(150deg, rgba(143, 97, 32, 0.06) 0%, #ffffff 100%);
+  border: 1px solid rgba(143, 97, 32, 0.32);
+  border-left: 3px solid var(--accent-champagne);
+}
+
+[data-theme="light"] .partner-modal-quote-text {
+  color: #111215;
+}
+
 [data-theme="light"] .toast-notification {
   background: #111215;
   color: #ffffff;
@@ -1254,6 +1279,104 @@ textarea {
 
 .modal-actions {
   margin-top: 6px;
+}
+
+/* Modal de Respuesta en Vivo de la Pareja */
+.partner-response-dialog {
+  max-width: 490px;
+  background:
+    linear-gradient(165deg, rgba(197, 160, 89, 0.07) 0%, rgba(255, 255, 255, 0.015) 60%, transparent 100%),
+    var(--bg-elevated);
+  border: 1px solid var(--border-gold);
+  border-top: 1px solid var(--border-specular);
+  box-shadow: 0 16px 56px -10px rgba(0, 0, 0, 0.5);
+}
+
+.partner-modal-author-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 18px 0 16px;
+}
+
+.partner-modal-emblem {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-champagne-soft);
+  border: 1px solid var(--border-gold);
+  color: var(--accent-champagne);
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+.partner-modal-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.partner-modal-author {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.partner-modal-status {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.partner-modal-card-box {
+  padding: 12px 16px;
+  border-radius: var(--radius-control);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  margin-bottom: 14px;
+}
+
+.partner-modal-card-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent-champagne);
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.partner-modal-card-text {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.partner-modal-quote-box {
+  padding: 20px 22px;
+  border-radius: var(--radius-card);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-gold);
+  border-left: 3px solid var(--accent-champagne);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.partner-modal-quote-text {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  line-height: 1.48;
+  color: var(--text-primary);
+  font-style: italic;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .toast-notification {

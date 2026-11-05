@@ -246,6 +246,21 @@ class ChemBlindAppController {
       this.ui.showResponseInput(currentText);
     });
 
+    // Partner Response Modal Actions
+    el.closeResponseModalBtn?.addEventListener('click', () => {
+      this.ui.setPartnerResponseModalOpen(false);
+    });
+
+    el.ackResponseModalBtn?.addEventListener('click', () => {
+      this.ui.setPartnerResponseModalOpen(false);
+    });
+
+    el.partnerResponseModal?.addEventListener('click', (e) => {
+      if (e.target === el.partnerResponseModal) {
+        this.ui.setPartnerResponseModalOpen(false);
+      }
+    });
+
     // Chrono Controls
     el.chronoToggleBtn?.addEventListener('click', () => {
       this.chrono.toggle();
@@ -637,7 +652,18 @@ class ChemBlindAppController {
         // Don't re-render if it's our own broadcast
         if (payload.authorRole && payload.authorRole === this.roomSession?.role) return;
 
+        // 1. Update the inline card display
         this.ui.showResponseDisplay(payload.authorName || 'Tu pareja', payload.text, false);
+
+        // 2. Open dedicated intimate modal with partner's answer
+        const promptContext = payload.cardPrompt || this.ui.elements.cardPromptText?.textContent || '';
+        this.ui.setPartnerResponseModalOpen(true, {
+          authorName: payload.authorName || 'Tu pareja',
+          text: payload.text,
+          cardPrompt: promptContext
+        });
+
+        // 3. Affinity score & toast
         if (typeof payload.chemistryScore === 'number' && this.state) {
           this.state.chemistryScore = payload.chemistryScore;
           this.ui.renderChemistry(payload.chemistryScore);
@@ -750,8 +776,10 @@ class ChemBlindAppController {
 
     // Broadcast in 2-phone room session
     if (this.roomSession?.channel) {
+      const cardPrompt = this.ui.elements.cardPromptText?.textContent || '';
       broadcastRoomEvent(this.roomSession.channel, 'CARD_RESPONSE', {
         cardId: this.state.currentCard.id,
+        cardPrompt,
         authorName,
         authorRole,
         text,

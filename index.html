@@ -507,6 +507,41 @@
     </div>
   </div>
 
+  <!-- =================================================================
+       MODAL: RESPUESTA RECIBIDA DE LA PAREJA (Apertura Automática en Vivo)
+       ================================================================= -->
+  <div id="partner-response-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="response-modal-eyebrow">
+    <div class="modal-dialog partner-response-dialog">
+      <div class="modal-header">
+        <span id="response-modal-eyebrow" class="eyebrow-label" style="margin-bottom: 0;">✦ Respuesta en Directo</span>
+        <button type="button" id="close-response-modal-btn" class="icon-btn" aria-label="Cerrar modal">✕</button>
+      </div>
+
+      <div class="partner-modal-author-row">
+        <span class="partner-modal-emblem">✦</span>
+        <div class="partner-modal-meta">
+          <h3 id="response-modal-author-name" class="partner-modal-author">Respuesta de tu cita</h3>
+          <span class="partner-modal-status">Acaba de responder a la carta</span>
+        </div>
+      </div>
+
+      <div class="partner-modal-card-box">
+        <span class="partner-modal-card-label">Pregunta:</span>
+        <p id="response-modal-card-prompt" class="partner-modal-card-text"></p>
+      </div>
+
+      <div class="partner-modal-quote-box">
+        <blockquote id="response-modal-text" class="partner-modal-quote-text"></blockquote>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 24px;">
+        <button type="button" id="ack-response-modal-btn" class="btn-flagship" style="width: 100%;">
+          <span>Continuar ✦</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Notificación Toast Discreta -->
   <div id="toast-notification" class="toast-notification" role="status" aria-live="polite"></div>
 
