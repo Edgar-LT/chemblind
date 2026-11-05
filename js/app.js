@@ -192,7 +192,9 @@ class ChemBlindAppController {
 
         this.chrono.stop();
         this.ui.resetResponseSection();
+        this.clearDraftResponse();
         this.state = setIntensityLevel(this.state, targetLevel);
+        this.persistLocalSession();
         this.syncRoomState('LEVEL_CHANGED');
         this.ui.animateCardTransition(() => {
           this.syncTimerWithCurrentCard();
@@ -206,7 +208,9 @@ class ChemBlindAppController {
       if (!this.state) return;
       this.chrono.stop();
       this.ui.resetResponseSection();
+      this.clearDraftResponse();
       this.state = completeCurrentTurn(this.state);
+      this.persistLocalSession();
       this.syncRoomState('NEXT_CARD');
       this.ui.animateCardTransition(() => {
         this.syncTimerWithCurrentCard();
@@ -224,7 +228,9 @@ class ChemBlindAppController {
       }
       this.chrono.stop();
       this.ui.resetResponseSection();
+      this.clearDraftResponse();
       this.state = result.state;
+      this.persistLocalSession();
       this.syncRoomState('WILDCARD_SKIP');
       this.ui.animateCardTransition(() => {
         this.syncTimerWithCurrentCard();
@@ -233,9 +239,10 @@ class ChemBlindAppController {
       this.ui.showToast('Carta saltada con comodín');
     });
 
-    // Card Response: Live Character Counter
+    // Card Response: Live Character Counter and Draft Autosave
     el.cardResponseInput?.addEventListener('input', (e) => {
       this.ui.updateResponseCharCount(e.target.value.length);
+      this.saveDraftResponse(e.target.value);
     });
 
     // Card Response: Send Response
@@ -461,31 +468,46 @@ class ChemBlindAppController {
 
   hydrateAndStartGame(roomData, guestName) {
     this.ui.resetResponseSection();
+
+    // Check if we have an active session snapshot in sessionStorage for this tab
+    const localSnapshot = this.restoreLocalSessionSnapshot(roomData.code);
+
+    const initialLevel = localSnapshot?.currentLevel || roomData.level || 1;
+
     this.state = createInitialGameState({
       playerOne: roomData.player_one_name,
       playerTwo: guestName,
       gameMode: roomData.mode,
-      initialLevel: roomData.level || 1,
+      initialLevel,
       customCards: this.savedCustomCards
     });
 
-    if (roomData.current_card_id) {
+    const targetCardId = localSnapshot?.currentCardId || roomData.current_card_id;
+    if (targetCardId) {
       const allCards = [...this.savedCustomCards, ...DEFAULT_CARDS];
-      const foundCard = allCards.find((c) => c.id === roomData.current_card_id);
+      const foundCard = allCards.find((c) => c.id === targetCardId);
       if (foundCard) {
         this.state.currentCard = foundCard;
       }
     }
 
-    if (typeof roomData.active_turn === 'number' && roomData.active_turn >= 1) {
-      this.state.activePlayerIndex = roomData.active_turn - 1;
+    if (localSnapshot?.turnCount) {
+      this.state.turnCount = localSnapshot.turnCount;
     }
 
-    if (typeof roomData.chemistry_score === 'number') {
-      this.state.chemistryScore = clampNumber(roomData.chemistry_score, 0, 100);
-    }
+    const activeTurn = typeof localSnapshot?.activePlayerIndex === 'number'
+      ? localSnapshot.activePlayerIndex
+      : (typeof roomData.active_turn === 'number' && roomData.active_turn >= 1 ? roomData.active_turn - 1 : 0);
+    this.state.activePlayerIndex = activeTurn;
 
-    if (roomData.level) {
+    const chemScore = typeof localSnapshot?.chemistryScore === 'number'
+      ? localSnapshot.chemistryScore
+      : (typeof roomData.chemistry_score === 'number' ? roomData.chemistry_score : 15);
+    this.state.chemistryScore = clampNumber(chemScore, 0, 100);
+
+    if (localSnapshot?.currentLevel) {
+      this.state.currentLevel = localSnapshot.currentLevel;
+    } else if (roomData.level) {
       this.state.currentLevel = roomData.level;
     }
 
@@ -493,6 +515,9 @@ class ChemBlindAppController {
     if (Array.isArray(roomData.chat_history) && roomData.chat_history.length > 0) {
       this.syncChatHistory(roomData.chat_history);
     }
+
+    // Restore unsubmitted draft if the user was typing before refreshing
+    this.restoreDraftResponse();
   }
 
   async handleOnboardingSubmit() {
@@ -659,8 +684,8 @@ class ChemBlindAppController {
             this.ui.renderGameStage(this.state, this.roomSession);
             this.ui.showToast(`¡${p2Name} se ha conectado a la sala!`);
           } else {
-            this.ui.showToast(`¡${p2Name} se ha reconectado a la sala!`);
-            this.syncRoomState('SYNC_REFRESH');
+            // Partner reconnected: gentle toast without disrupting active game or wiping drafts
+            this.ui.showToast(`¡${p2Name} se ha reconectado!`);
           }
         }
       },
@@ -807,22 +832,109 @@ class ChemBlindAppController {
     }
   }
 
+  /**
+   * Persists the active game state snapshot in sessionStorage for seamless refresh resilience.
+   */
+  persistLocalSession() {
+    if (!this.state || !this.roomSession?.code) return;
+    try {
+      const snapshot = {
+        activePlayerIndex: this.state.activePlayerIndex,
+        turnCount: this.state.turnCount,
+        chemistryScore: this.state.chemistryScore,
+        currentLevel: this.state.currentLevel,
+        currentCardId: this.state.currentCard?.id,
+        savedAt: Date.now()
+      };
+      sessionStorage.setItem(`chemblind_session_${this.roomSession.code}`, JSON.stringify(snapshot));
+    } catch (e) {
+      // Storage unavailable or disabled
+    }
+  }
+
+  /**
+   * Retrieves any cached session snapshot from sessionStorage for this room.
+   * @param {string} roomCode
+   * @returns {Object|null}
+   */
+  restoreLocalSessionSnapshot(roomCode) {
+    if (!roomCode) return null;
+    try {
+      const raw = sessionStorage.getItem(`chemblind_session_${roomCode}`);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * Autosaves unsubmitted response draft text in sessionStorage.
+   * @param {string} text
+   */
+  saveDraftResponse(text) {
+    if (!this.roomSession?.code) return;
+    try {
+      if (text) {
+        sessionStorage.setItem(`chemblind_draft_${this.roomSession.code}`, text);
+      } else {
+        sessionStorage.removeItem(`chemblind_draft_${this.roomSession.code}`);
+      }
+    } catch (e) {}
+  }
+
+  /**
+   * Restores unsubmitted draft text into the card textarea upon page reload.
+   */
+  restoreDraftResponse() {
+    if (!this.roomSession?.code) return;
+    try {
+      const draft = sessionStorage.getItem(`chemblind_draft_${this.roomSession.code}`);
+      if (draft && this.ui.elements.cardResponseInput) {
+        this.ui.showResponseInput(draft);
+      }
+    } catch (e) {}
+  }
+
+  /**
+   * Clears unsubmitted draft after response has been submitted or card changed.
+   */
+  clearDraftResponse() {
+    if (!this.roomSession?.code) return;
+    try {
+      sessionStorage.removeItem(`chemblind_draft_${this.roomSession.code}`);
+    } catch (e) {}
+  }
+
   handleRemoteCardAction(payload) {
     if (!payload.currentCardId) return;
 
-    this.ui.resetResponseSection();
+    // Guard: if it's already the exact same card, update state without re-animating or wiping drafts
+    const isSameCard = this.state?.currentCard?.id === payload.currentCardId;
 
     const allCards = [...this.state.customCards, ...DEFAULT_CARDS];
     const targetCard = allCards.find((c) => c.id === payload.currentCardId);
 
     this.state = {
       ...this.state,
-      activePlayerIndex: payload.activePlayerIndex,
+      activePlayerIndex: payload.activePlayerIndex ?? this.state.activePlayerIndex,
       turnCount: Math.max(this.state.turnCount, payload.turnCount || 0),
       chemistryScore: payload.chemistryScore ?? this.state.chemistryScore,
       currentLevel: payload.currentLevel || this.state.currentLevel,
       currentCard: targetCard || this.state.currentCard
     };
+
+    this.persistLocalSession();
+
+    if (isSameCard) {
+      // Do NOT interrupt the partner's typing or stop their timer if the card hasn't actually changed
+      this.ui.renderGameStage(this.state, this.roomSession);
+      return;
+    }
+
+    // New card arrived from partner: animate and advance
+    this.ui.resetResponseSection();
+    this.clearDraftResponse();
 
     this.ui.animateCardTransition(() => {
       this.syncTimerWithCurrentCard();
@@ -867,6 +979,8 @@ class ChemBlindAppController {
 
     // 1. Display locally on the card with edit permission
     this.ui.showResponseDisplay(authorName, text, true);
+    this.clearDraftResponse();
+    this.persistLocalSession();
 
     // 2. Add to chat thread as an outgoing card response bubble
     this.renderedMessageIds.add(msgId);
@@ -979,6 +1093,12 @@ class ChemBlindAppController {
   }
 
   teardownRoomSession() {
+    if (this.roomSession?.code) {
+      try {
+        sessionStorage.removeItem(`chemblind_session_${this.roomSession.code}`);
+        sessionStorage.removeItem(`chemblind_draft_${this.roomSession.code}`);
+      } catch (e) {}
+    }
     if (this.roomSession?.channel) {
       try {
         this.roomSession.channel.unsubscribe();
