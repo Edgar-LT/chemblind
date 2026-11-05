@@ -878,16 +878,10 @@ class ChemBlindAppController {
       cardPrompt: msg.cardPrompt || ''
     });
 
-    // 2. If it is a card response for the active card, update card quote box
-    if (msg.isCardResponse && (!msg.cardId || msg.cardId === this.state?.currentCard?.id)) {
-      this.ui.showResponseDisplay(msg.authorName || 'Tu Cita', msg.text, false);
-    }
-
-    // 3. Immediately open conversation modal like Facebook Messenger & display notification
-    this.ui.setChatModalOpen(true);
+    // 2. Discrete toast notification (WITHOUT forcing the modal open on the partner)
     this.ui.showToast(`💬 ${msg.authorName || 'Tu Cita'}: ${msg.text.slice(0, 32)}...`);
 
-    // 4. Update affinity score if present
+    // 3. Update affinity score if present
     if (typeof msg.chemistryScore === 'number' && this.state) {
       this.state.chemistryScore = clampNumber(msg.chemistryScore, 0, 100);
       this.ui.renderChemistry(this.state.chemistryScore);

@@ -14,7 +14,7 @@
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <link rel="stylesheet" href="./css/styles.css?v=2.3.7" />
+  <link rel="stylesheet" href="./css/styles.css?v=2.3.8" />
 </head>
 <body>
 
@@ -368,60 +368,15 @@
               ↺
             </button>
           </div>
-
-          <!-- Sección de Respuesta Interactiva a la Carta -->
-          <div id="card-response-section" class="card-response-section">
-            <!-- Formulario de Respuesta (Redacción) -->
-            <div id="response-input-box" class="response-input-box">
-              <div class="response-input-header">
-                <label for="card-response-input" class="response-input-label">
-                  <span class="response-input-prompt">Escribe tu respuesta</span>
-                </label>
-                <span id="response-char-count" class="response-char-count tabular-nums">0 / 360</span>
-              </div>
-              <textarea
-                id="card-response-input"
-                class="luxury-textarea card-response-textarea"
-                rows="3"
-                maxlength="360"
-                placeholder="Escribe tu respuesta aquí con total sinceridad..."
-                aria-label="Respuesta a la carta"
-              ></textarea>
-              <div class="response-action-row">
-                <button type="button" id="card-open-chat-btn" class="btn-ghost btn-card-chat" title="Abrir chat de la carta">
-                  <span class="chat-btn-icon">💬</span>
-                  <span>Abrir Chat</span>
-                </button>
-                <button type="button" id="send-response-btn" class="btn-flagship btn-send-response">
-                  <span>Responder</span>
-                  <span class="send-icon">✦</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Caja de Exhibición de la Respuesta (Una vez enviada) -->
-            <div id="response-display-box" class="response-display-box is-hidden">
-              <div class="response-display-header">
-                <div class="response-author-pill">
-                  <span class="response-author-icon">✦</span>
-                  <span class="response-author-text">Respuesta de <strong id="response-author-name">Jugador</strong></span>
-                </div>
-                <button type="button" id="edit-response-btn" class="btn-ghost btn-xs edit-response-btn" title="Editar tu respuesta">
-                  <span>✎ Editar</span>
-                </button>
-              </div>
-              <blockquote id="response-display-text" class="response-display-text"></blockquote>
-              <div class="response-display-footer">
-                <span id="response-status-badge" class="response-status-badge">Compartida en la cita</span>
-                <button type="button" id="open-chat-modal-btn" class="btn-ghost btn-xs" title="Ver conversación completa">
-                  <span>💬 Ver conversación</span>
-                </button>
-              </div>
-            </div>
+          <!-- Botón Directo para Abrir el Chat Grupal -->
+          <div class="card-chat-action-container">
+            <button type="button" id="card-open-chat-btn" class="btn-card-open-chat" title="Abrir chat grupal en directo">
+              <span class="chat-btn-icon">💬</span>
+              <span class="chat-btn-label">Abrir Chat Grupal</span>
+              <span class="chat-btn-spark">✦</span>
+            </button>
           </div>
-        </div>
-
-        <!-- Pie de la Carta: Acciones Limpias -->
+        </div><!-- Pie de la Carta: Acciones Limpias -->
         <div class="card-footer">
           <div class="footer-secondary-actions">
             <button type="button" id="wildcard-skip-btn" class="btn-ghost" title="Saltar esta carta usando un comodín">
@@ -577,6 +532,6 @@
   <!-- Notificación Toast Discreta -->
   <div id="toast-notification" class="toast-notification" role="status" aria-live="polite"></div>
 
-  <script type="module" src="./js/app.js?v=2.3.7"></script>
+  <script type="module" src="./js/app.js?v=2.3.8"></script>
 </body>
 </html>
