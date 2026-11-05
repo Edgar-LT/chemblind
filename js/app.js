@@ -790,8 +790,9 @@ class ChemBlindAppController {
   syncChatHistory(messages) {
     if (!Array.isArray(messages)) return;
     const mySenderId = getSessionClientId();
-    const myRole = this.roomSession?.role;
-    const myName = myRole === 'player_one' ? this.roomSession?.p1Name : this.roomSession?.p2Name;
+
+    let newIncomingCount = 0;
+    let latestIncoming = null;
 
     messages.forEach((msg) => {
       if (!msg || !msg.text) return;
@@ -800,22 +801,29 @@ class ChemBlindAppController {
       if (this.renderedMessageIds.has(msgId)) return;
       this.renderedMessageIds.add(msgId);
 
-      const isOutgoing = (msg.senderId && msg.senderId === mySenderId) ||
-        (msg.authorRole === myRole && msg.authorName === myName);
+      const isOutgoing = Boolean(msg.senderId && msg.senderId === mySenderId);
 
       this.ui.addChatMessage({
         authorName: msg.authorName || (isOutgoing ? 'Tú' : 'Tu Cita'),
         isOutgoing,
         text: msg.text,
-        timeStr: msg.timeStr,
+        timeStr: msg.timeStr || '',
         isCardResponse: Boolean(msg.isCardResponse)
       });
 
-      // If it's a card response from partner for current card, show in quote box
-      if (!isOutgoing && msg.isCardResponse && msg.cardId && this.state?.currentCard?.id === msg.cardId) {
-        this.ui.showResponseDisplay(msg.authorName || 'Tu Cita', msg.text, false);
+      if (!isOutgoing) {
+        newIncomingCount++;
+        latestIncoming = msg;
+        if (msg.isCardResponse && (!msg.cardId || msg.cardId === this.state?.currentCard?.id)) {
+          this.ui.showResponseDisplay(msg.authorName || 'Tu Cita', msg.text, false);
+        }
       }
     });
+
+    if (newIncomingCount > 0 && latestIncoming) {
+      this.ui.setChatModalOpen(true);
+      this.ui.showToast(`💬 Mensaje de ${latestIncoming.authorName || 'Tu Cita'}`);
+    }
   }
 
   /**
@@ -829,12 +837,7 @@ class ChemBlindAppController {
     if (this.renderedMessageIds.has(msgId)) return;
 
     const mySenderId = getSessionClientId();
-    const myRole = this.roomSession?.role;
-    const myName = myRole === 'player_one' ? this.roomSession?.p1Name : this.roomSession?.p2Name;
-
-    // Distinguish sender by session ID, role, and name so cross-tab and cross-device both work reliably
-    const isOutgoing = (payload.senderId && payload.senderId === mySenderId) ||
-      (payload.authorRole === myRole && payload.authorName === myName);
+    const isOutgoing = Boolean(payload.senderId && payload.senderId === mySenderId);
 
     if (isOutgoing) return;
 
@@ -855,8 +858,9 @@ class ChemBlindAppController {
       this.ui.showResponseDisplay(payload.authorName || 'Tu Cita', payload.text, false);
     }
 
-    // 3. Just like Facebook Messenger: automatically pop open the conversation modal!
+    // 3. Just like Facebook Messenger: automatically pop open the conversation modal and toast!
     this.ui.setChatModalOpen(true);
+    this.ui.showToast(`💬 Mensaje de ${payload.authorName || 'Tu Cita'}`);
 
     // 4. Update affinity score if present
     if (typeof payload.chemistryScore === 'number' && this.state) {
@@ -1098,7 +1102,7 @@ class ChemBlindAppController {
       }
 
       // Atomic persistence in PostgreSQL
-      saveRoomMessage(this.roomSession.code, messagePayload);
+      await saveRoomMessage(this.roomSession.code, messagePayload);
 
       this.syncRoomState('CARD_RESPONSE');
       this.ui.showToast('¡Respuesta enviada a tu cita! ✦');
@@ -1163,7 +1167,7 @@ class ChemBlindAppController {
         broadcastRoomEvent(this.roomSession.channel, 'CHAT_MESSAGE', messagePayload);
       }
 
-      saveRoomMessage(this.roomSession.code, messagePayload);
+      await saveRoomMessage(this.roomSession.code, messagePayload);
     }
   }
 
