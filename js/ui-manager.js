@@ -99,13 +99,18 @@ export class UIManager {
       editResponseBtn: byId('edit-response-btn'),
       responseStatusBadge: byId('response-status-badge'),
 
-      // Partner Response Modal (Live incoming answer)
-      partnerResponseModal: byId('partner-response-modal'),
-      closeResponseModalBtn: byId('close-response-modal-btn'),
-      ackResponseModalBtn: byId('ack-response-modal-btn'),
-      responseModalAuthorName: byId('response-modal-author-name'),
-      responseModalCardPrompt: byId('response-modal-card-prompt'),
-      responseModalText: byId('response-modal-text'),
+      // Facebook-style Chat Widget & Floating Launcher
+      fbChatWidget: byId('fb-chat-widget'),
+      fbChatPartnerName: byId('fb-chat-partner-name'),
+      fbChatMinimizeBtn: byId('fb-chat-minimize-btn'),
+      fbChatCloseBtn: byId('fb-chat-close-btn'),
+      fbChatCardPrompt: byId('fb-chat-card-prompt'),
+      fbChatMessages: byId('fb-chat-messages'),
+      fbChatForm: byId('fb-chat-form'),
+      fbChatInput: byId('fb-chat-input'),
+      fbChatSendBtn: byId('fb-chat-send-btn'),
+      floatingChatTrigger: byId('floating-chat-trigger'),
+      chatUnreadBadge: byId('chat-unread-badge'),
 
       // Custom Card Modal
       customCardModal: byId('custom-card-modal'),
@@ -162,6 +167,8 @@ export class UIManager {
       this.elements.guestJoinForm?.classList.add('is-hidden');
       this.elements.changePlayersBtn?.classList.add('is-hidden');
       this.elements.openCustomModalBtn?.classList.add('is-hidden');
+      this.elements.floatingChatTrigger?.classList.add('is-hidden');
+      this.setChatWidgetOpen(false);
     } else if (screen === 'guest-join') {
       this.elements.onboardingScreen?.classList.remove('is-hidden');
       this.elements.onboardingForm?.classList.add('is-hidden');
@@ -170,14 +177,19 @@ export class UIManager {
       this.elements.openCustomModalBtn?.classList.add('is-hidden');
       this.elements.viewRoomsBtn?.classList.add('is-hidden');
       this.elements.activeRoomsBanner?.classList.add('is-hidden');
+      this.elements.floatingChatTrigger?.classList.add('is-hidden');
+      this.setChatWidgetOpen(false);
     } else if (screen === 'waiting') {
       this.elements.roomWaitingScreen?.classList.remove('is-hidden');
       this.elements.changePlayersBtn?.classList.add('is-hidden');
       this.elements.openCustomModalBtn?.classList.add('is-hidden');
+      this.elements.floatingChatTrigger?.classList.add('is-hidden');
+      this.setChatWidgetOpen(false);
     } else if (screen === 'game') {
       this.elements.gameScreen?.classList.remove('is-hidden');
       this.elements.changePlayersBtn?.classList.remove('is-hidden');
       this.elements.openCustomModalBtn?.classList.remove('is-hidden');
+      this.elements.floatingChatTrigger?.classList.remove('is-hidden');
     }
   }
 
@@ -281,7 +293,15 @@ export class UIManager {
       if (this.elements.cardPromptHint) {
         this.elements.cardPromptHint.textContent = card.hint || '';
       }
+
+      // Sync Facebook-style Chat Context & Partner Name
+      this.setChatCardPrompt(card.text);
     }
+
+    const partnerName = roomSession
+      ? (roomSession.role === 'player_one' ? (roomSession.p2Name || 'Tu Pareja') : (roomSession.p1Name || 'Tu Pareja'))
+      : (otherPlayer ? otherPlayer.name : 'Tu Cita');
+    this.setChatPartnerName(partnerName);
 
     // Wildcards
     if (this.elements.wildcardBtnCount) {
@@ -313,7 +333,6 @@ export class UIManager {
     if (this.elements.editResponseBtn) {
       this.elements.editResponseBtn.style.display = '';
     }
-    this.setPartnerResponseModalOpen(false);
   }
 
   /**
@@ -501,31 +520,124 @@ export class UIManager {
   }
 
   /**
-   * Opens or closes the intimate live response modal when a partner sends an answer.
+   * Opens or minimizes the Facebook-style chat window widget.
    * @param {boolean} isOpen
-   * @param {Object} [data]
-   * @param {string} [data.authorName]
-   * @param {string} [data.text]
-   * @param {string} [data.cardPrompt]
    */
-  setPartnerResponseModalOpen(isOpen, { authorName, text, cardPrompt } = {}) {
-    const modal = this.elements.partnerResponseModal;
-    if (!modal) return;
+  setChatWidgetOpen(isOpen) {
+    const widget = this.elements.fbChatWidget;
+    if (!widget) return;
 
     if (isOpen) {
-      if (this.elements.responseModalAuthorName && authorName) {
-        this.elements.responseModalAuthorName.textContent = `Respuesta de ${authorName}`;
+      widget.classList.remove('is-closed');
+      this.setChatUnreadCount(0);
+      if (this.elements.floatingChatTrigger) {
+        this.elements.floatingChatTrigger.style.display = 'none';
       }
-      if (this.elements.responseModalText && text) {
-        this.elements.responseModalText.textContent = text;
-      }
-      if (this.elements.responseModalCardPrompt) {
-        this.elements.responseModalCardPrompt.textContent = cardPrompt || '';
-      }
-      modal.classList.add('is-open');
+      setTimeout(() => {
+        this.elements.fbChatInput?.focus();
+        if (this.elements.fbChatMessages) {
+          this.elements.fbChatMessages.scrollTop = this.elements.fbChatMessages.scrollHeight;
+        }
+      }, 50);
     } else {
-      modal.classList.remove('is-open');
+      widget.classList.add('is-closed');
+      if (this.elements.floatingChatTrigger && !this.elements.gameScreen?.classList.contains('is-hidden')) {
+        this.elements.floatingChatTrigger.style.display = 'inline-flex';
+      }
     }
+  }
+
+  /**
+   * Returns whether the chat window is currently visible.
+   * @returns {boolean}
+   */
+  isChatWidgetOpen() {
+    return Boolean(this.elements.fbChatWidget && !this.elements.fbChatWidget.classList.contains('is-closed'));
+  }
+
+  /**
+   * Sets the partner's display name in the chat header.
+   * @param {string} name
+   */
+  setChatPartnerName(name) {
+    if (this.elements.fbChatPartnerName) {
+      this.elements.fbChatPartnerName.textContent = name || 'Tu Pareja';
+    }
+  }
+
+  /**
+   * Updates the card context bar in the chat window.
+   * @param {string} promptText
+   */
+  setChatCardPrompt(promptText) {
+    if (this.elements.fbChatCardPrompt) {
+      this.elements.fbChatCardPrompt.textContent = promptText || 'Selecciona una carta para conversar.';
+    }
+  }
+
+  /**
+   * Updates the unread counter badge on the floating chat launcher.
+   * @param {number} count
+   */
+  setChatUnreadCount(count) {
+    const badge = this.elements.chatUnreadBadge;
+    if (!badge) return;
+    if (count > 0) {
+      badge.textContent = String(count);
+      badge.classList.remove('is-hidden');
+    } else {
+      badge.textContent = '0';
+      badge.classList.add('is-hidden');
+    }
+  }
+
+  /**
+   * Appends a chat bubble to the thread using safe text nodes (zero innerHTML injection).
+   * @param {Object} options
+   * @param {string} options.authorName
+   * @param {boolean} options.isOutgoing
+   * @param {string} options.text
+   * @param {string} [options.timeStr]
+   * @param {boolean} [options.isCardResponse=false]
+   */
+  addChatMessage({ authorName, isOutgoing, text, timeStr, isCardResponse = false }) {
+    const list = this.elements.fbChatMessages;
+    if (!list) return;
+
+    const emptyHint = list.querySelector('.fb-chat-empty-hint');
+    if (emptyHint) {
+      emptyHint.remove();
+    }
+
+    const row = document.createElement('div');
+    row.className = `fb-bubble-row ${isOutgoing ? 'outgoing' : 'incoming'}`;
+
+    const authorSpan = document.createElement('span');
+    authorSpan.className = 'fb-bubble-author';
+    authorSpan.textContent = authorName || (isOutgoing ? 'Tú' : 'Tu Cita');
+    row.appendChild(authorSpan);
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'fb-bubble-content';
+
+    if (isCardResponse) {
+      const badge = document.createElement('span');
+      badge.className = 'fb-bubble-badge';
+      badge.textContent = '✦ Respuesta a la carta';
+      contentDiv.appendChild(badge);
+    }
+
+    const textNode = document.createTextNode(text);
+    contentDiv.appendChild(textNode);
+    row.appendChild(contentDiv);
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'fb-bubble-time';
+    timeSpan.textContent = timeStr || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    row.appendChild(timeSpan);
+
+    list.appendChild(row);
+    list.scrollTop = list.scrollHeight;
   }
 
   updateActiveRoomsCount(count, isRoomSelected) {

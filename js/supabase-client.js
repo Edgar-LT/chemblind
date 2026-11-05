@@ -238,6 +238,9 @@ export function subscribeToRoomChannel(roomCode, { onStateUpdate, onPlayerJoined
       .on('broadcast', { event: 'CARD_RESPONSE' }, (payload) => {
         if (onCardResponse) onCardResponse(payload.payload);
       })
+      .on('broadcast', { event: 'CHAT_MESSAGE' }, (payload) => {
+        if (onCardResponse) onCardResponse(payload.payload);
+      })
       .subscribe();
 
     return channel;

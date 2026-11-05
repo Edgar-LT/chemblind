@@ -246,19 +246,24 @@ class ChemBlindAppController {
       this.ui.showResponseInput(currentText);
     });
 
-    // Partner Response Modal Actions
-    el.closeResponseModalBtn?.addEventListener('click', () => {
-      this.ui.setPartnerResponseModalOpen(false);
+    // Facebook-style Chat Widget Controls
+    el.floatingChatTrigger?.addEventListener('click', () => {
+      this.unreadChatCount = 0;
+      this.ui.setChatUnreadCount(0);
+      this.ui.setChatWidgetOpen(true);
     });
 
-    el.ackResponseModalBtn?.addEventListener('click', () => {
-      this.ui.setPartnerResponseModalOpen(false);
+    el.fbChatMinimizeBtn?.addEventListener('click', () => {
+      this.ui.setChatWidgetOpen(false);
     });
 
-    el.partnerResponseModal?.addEventListener('click', (e) => {
-      if (e.target === el.partnerResponseModal) {
-        this.ui.setPartnerResponseModalOpen(false);
-      }
+    el.fbChatCloseBtn?.addEventListener('click', () => {
+      this.ui.setChatWidgetOpen(false);
+    });
+
+    el.fbChatForm?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.handleSendChatMessage();
     });
 
     // Chrono Controls
@@ -652,23 +657,30 @@ class ChemBlindAppController {
         // Don't re-render if it's our own broadcast
         if (payload.authorRole && payload.authorRole === this.roomSession?.role) return;
 
-        // 1. Update the inline card display
-        this.ui.showResponseDisplay(payload.authorName || 'Tu pareja', payload.text, false);
+        // 1. Update the inline card display if it is a card response
+        if (payload.isCardResponse !== false) {
+          this.ui.showResponseDisplay(payload.authorName || 'Tu pareja', payload.text, false);
+        }
 
-        // 2. Open dedicated intimate modal with partner's answer
-        const promptContext = payload.cardPrompt || this.ui.elements.cardPromptText?.textContent || '';
-        this.ui.setPartnerResponseModalOpen(true, {
+        // 2. Add incoming bubble to the Facebook chat thread
+        const timeStr = payload.timeStr || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        this.ui.addChatMessage({
           authorName: payload.authorName || 'Tu pareja',
+          isOutgoing: false,
           text: payload.text,
-          cardPrompt: promptContext
+          timeStr,
+          isCardResponse: Boolean(payload.isCardResponse)
         });
 
-        // 3. Affinity score & toast
+        // 3. Just like Facebook Messenger: automatically pop open the chat window!
+        this.ui.setChatWidgetOpen(true);
+
+        // 4. Affinity score & toast
         if (typeof payload.chemistryScore === 'number' && this.state) {
           this.state.chemistryScore = payload.chemistryScore;
           this.ui.renderChemistry(payload.chemistryScore);
         }
-        this.ui.showToast(`¡${payload.authorName || 'Tu pareja'} ha respondido a la carta! ✦`);
+        this.ui.showToast(`💬 ${payload.authorName || 'Tu pareja'}: "${payload.text.substring(0, 36)}..."`);
       },
       onStateUpdate: (newRecord) => {
         // Lifecycle fallback: detect player 2 initial join if broadcast missed
@@ -766,15 +778,28 @@ class ChemBlindAppController {
       authorName = activePlayer?.name || 'Jugador';
     }
 
-    // Display locally with edit permission
+    // 1. Display locally on the card with edit permission
     this.ui.showResponseDisplay(authorName, text, true);
 
-    // Chemistry affinity bonus (+3%)
+    // 2. Add to chat thread as an outgoing card response bubble
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    this.ui.addChatMessage({
+      authorName,
+      isOutgoing: true,
+      text,
+      timeStr,
+      isCardResponse: true
+    });
+
+    // 3. Automatically open the Facebook chat window on screen
+    this.ui.setChatWidgetOpen(true);
+
+    // 4. Chemistry affinity bonus (+3%)
     const newScore = Math.min(100, (this.state.chemistryScore || 0) + 3);
     this.state.chemistryScore = newScore;
     this.ui.renderChemistry(newScore);
 
-    // Broadcast in 2-phone room session
+    // 5. Broadcast in 2-phone room session
     if (this.roomSession?.channel) {
       const cardPrompt = this.ui.elements.cardPromptText?.textContent || '';
       broadcastRoomEvent(this.roomSession.channel, 'CARD_RESPONSE', {
@@ -783,6 +808,8 @@ class ChemBlindAppController {
         authorName,
         authorRole,
         text,
+        timeStr,
+        isCardResponse: true,
         chemistryScore: newScore,
         timestamp: Date.now()
       });
@@ -790,7 +817,56 @@ class ChemBlindAppController {
       this.syncRoomState('CARD_RESPONSE');
       this.ui.showToast('¡Respuesta enviada a tu cita! ✦');
     } else {
-      this.ui.showToast('¡Respuesta guardada! ✦');
+      this.ui.showToast('¡Respuesta guardada en el chat! ✦');
+    }
+  }
+
+  /**
+   * Handles sending a direct chat message from the Facebook-style widget.
+   */
+  handleSendChatMessage() {
+    const inputEl = this.ui.elements.fbChatInput;
+    const text = inputEl ? inputEl.value.trim() : '';
+    if (!text) return;
+
+    let authorName = 'Tú';
+    let authorRole = 'local';
+
+    if (this.roomSession) {
+      authorRole = this.roomSession.role;
+      authorName = this.roomSession.role === 'player_one'
+        ? (this.roomSession.p1Name || 'Anfitrión')
+        : (this.roomSession.p2Name || 'Invitado');
+    } else if (this.state) {
+      const activePlayer = this.state.players[this.state.activePlayerIndex];
+      authorName = activePlayer?.name || 'Jugador';
+    }
+
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    // Add outgoing bubble locally
+    this.ui.addChatMessage({
+      authorName,
+      isOutgoing: true,
+      text,
+      timeStr,
+      isCardResponse: false
+    });
+
+    if (inputEl) {
+      inputEl.value = '';
+    }
+
+    // Broadcast if connected in room
+    if (this.roomSession?.channel) {
+      broadcastRoomEvent(this.roomSession.channel, 'CHAT_MESSAGE', {
+        authorName,
+        authorRole,
+        text,
+        timeStr,
+        isCardResponse: false,
+        timestamp: Date.now()
+      });
     }
   }
 

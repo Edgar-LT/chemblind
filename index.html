@@ -508,39 +508,65 @@
   </div>
 
   <!-- =================================================================
-       MODAL: RESPUESTA RECIBIDA DE LA PAREJA (Apertura Automática en Vivo)
+       WIDGET / MODAL DE CHAT EN VIVO (ESTILO FACEBOOK MESSENGER / ALTA RELOJERÍA)
        ================================================================= -->
-  <div id="partner-response-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="response-modal-eyebrow">
-    <div class="modal-dialog partner-response-dialog">
-      <div class="modal-header">
-        <span id="response-modal-eyebrow" class="eyebrow-label" style="margin-bottom: 0;">✦ Respuesta en Directo</span>
-        <button type="button" id="close-response-modal-btn" class="icon-btn" aria-label="Cerrar modal">✕</button>
-      </div>
-
-      <div class="partner-modal-author-row">
-        <span class="partner-modal-emblem">✦</span>
-        <div class="partner-modal-meta">
-          <h3 id="response-modal-author-name" class="partner-modal-author">Respuesta de tu cita</h3>
-          <span class="partner-modal-status">Acaba de responder a la carta</span>
+  <div id="fb-chat-widget" class="fb-chat-widget is-closed" aria-label="Ventana de chat en vivo">
+    <!-- Cabecera del Chat -->
+    <header class="fb-chat-header">
+      <div class="fb-chat-user-info">
+        <div class="fb-chat-avatar-wrapper">
+          <span class="fb-chat-avatar">✦</span>
+          <span class="fb-chat-online-indicator" title="En línea"></span>
+        </div>
+        <div class="fb-chat-text-meta">
+          <span id="fb-chat-partner-name" class="fb-chat-partner-name">Tu Cita</span>
+          <span class="fb-chat-status-text">En línea · ChemBlind</span>
         </div>
       </div>
-
-      <div class="partner-modal-card-box">
-        <span class="partner-modal-card-label">Pregunta:</span>
-        <p id="response-modal-card-prompt" class="partner-modal-card-text"></p>
+      <div class="fb-chat-header-actions">
+        <button type="button" id="fb-chat-minimize-btn" class="fb-chat-header-btn" title="Minimizar chat" aria-label="Minimizar chat">−</button>
+        <button type="button" id="fb-chat-close-btn" class="fb-chat-header-btn" title="Cerrar chat" aria-label="Cerrar chat">✕</button>
       </div>
+    </header>
 
-      <div class="partner-modal-quote-box">
-        <blockquote id="response-modal-text" class="partner-modal-quote-text"></blockquote>
-      </div>
+    <!-- Contexto de la Pregunta / Carta Actual -->
+    <div class="fb-chat-card-context">
+      <span class="fb-context-tag">Carta en juego</span>
+      <p id="fb-chat-card-prompt" class="fb-context-prompt">Selecciona o juega una carta para conversar sobre ella.</p>
+    </div>
 
-      <div class="modal-actions" style="margin-top: 24px;">
-        <button type="button" id="ack-response-modal-btn" class="btn-flagship" style="width: 100%;">
-          <span>Continuar ✦</span>
-        </button>
+    <!-- Hilo de Mensajes con Scroll -->
+    <div id="fb-chat-messages" class="fb-chat-messages" role="log" aria-live="polite">
+      <div class="fb-chat-empty-hint">
+        <span class="fb-hint-icon">💬</span>
+        <p>Inicien la conversación o respondan a la carta actual para verse aquí.</p>
       </div>
     </div>
+
+    <!-- Pie del Chat: Entrada de Texto y Envío -->
+    <footer class="fb-chat-footer">
+      <form id="fb-chat-form" class="fb-chat-input-row">
+        <input
+          type="text"
+          id="fb-chat-input"
+          class="fb-chat-input"
+          placeholder="Escribe una respuesta o mensaje..."
+          autocomplete="off"
+          maxlength="360"
+        />
+        <button type="submit" id="fb-chat-send-btn" class="fb-chat-send-btn" title="Enviar mensaje">
+          <span>➤</span>
+        </button>
+      </form>
+    </footer>
   </div>
+
+  <!-- Botón Flotante para Abrir / Minimizar el Chat (Launcher estilo Facebook) -->
+  <button type="button" id="floating-chat-trigger" class="floating-chat-trigger is-hidden" title="Abrir chat en vivo">
+    <span class="floating-chat-icon">💬</span>
+    <span class="floating-chat-label">Chat</span>
+    <span id="chat-unread-badge" class="chat-unread-badge is-hidden">0</span>
+  </button>
 
   <!-- Notificación Toast Discreta -->
   <div id="toast-notification" class="toast-notification" role="status" aria-live="polite"></div>
