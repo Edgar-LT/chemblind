@@ -27,7 +27,9 @@ import {
   updateRoomRecord,
   fetchClientActiveRooms,
   closeGameRoom,
-  getDeviceId
+  getDeviceId,
+  getSessionClientId,
+  saveRoomMessage
 } from './supabase-client.js';
 
 import { ChronographService } from './chronograph.js';
@@ -45,6 +47,7 @@ class ChemBlindAppController {
     this.roomSession = null;
     this.pendingInvite = null;
     this.activeRoomsList = [];
+    this.renderedMessageIds = new Set();
 
     // Initialize decoupled UI & Timing subsystems
     this.ui = new UIManager();
@@ -246,12 +249,20 @@ class ChemBlindAppController {
       this.ui.showResponseInput(currentText);
     });
 
-    // Conversation Chat Modal Controls
+    // Conversation Chat Modal Controls (All 4 triggers: card, display quote, nav, and floating)
     el.cardOpenChatBtn?.addEventListener('click', () => {
       this.ui.setChatModalOpen(true);
     });
 
     el.openChatModalBtn?.addEventListener('click', () => {
+      this.ui.setChatModalOpen(true);
+    });
+
+    el.navChatBtn?.addEventListener('click', () => {
+      this.ui.setChatModalOpen(true);
+    });
+
+    el.floatingChatTrigger?.addEventListener('click', () => {
       this.ui.setChatModalOpen(true);
     });
 
@@ -477,6 +488,11 @@ class ChemBlindAppController {
     if (roomData.level) {
       this.state.currentLevel = roomData.level;
     }
+
+    // Hydrate persistent chat history from PostgreSQL
+    if (Array.isArray(roomData.chat_history) && roomData.chat_history.length > 0) {
+      this.syncChatHistory(roomData.chat_history);
+    }
   }
 
   async handleOnboardingSubmit() {
@@ -657,34 +673,7 @@ class ChemBlindAppController {
         this.handleRemoteCardAction(payload);
       },
       onCardResponse: (payload) => {
-        if (!payload || !payload.text) return;
-        // Don't re-render if it's our own broadcast
-        if (payload.authorRole && payload.authorRole === this.roomSession?.role) return;
-
-        // 1. Update the inline card display if it is a card response
-        if (payload.isCardResponse !== false) {
-          this.ui.showResponseDisplay(payload.authorName || 'Tu pareja', payload.text, false);
-        }
-
-        // 2. Add incoming bubble to the Facebook chat thread
-        const timeStr = payload.timeStr || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        this.ui.addChatMessage({
-          authorName: payload.authorName || 'Tu pareja',
-          isOutgoing: false,
-          text: payload.text,
-          timeStr,
-          isCardResponse: Boolean(payload.isCardResponse)
-        });
-
-        // 3. Just like Facebook Messenger: automatically pop open the conversation modal!
-        this.ui.setChatModalOpen(true);
-
-        // 4. Affinity score & toast
-        if (typeof payload.chemistryScore === 'number' && this.state) {
-          this.state.chemistryScore = payload.chemistryScore;
-          this.ui.renderChemistry(payload.chemistryScore);
-        }
-        this.ui.showToast(`💬 ${payload.authorName || 'Tu pareja'}: "${payload.text.substring(0, 36)}..."`);
+        this.handleIncomingMessage(payload);
       },
       onStateUpdate: (newRecord) => {
         // Lifecycle fallback: detect player 2 initial join if broadcast missed
@@ -698,8 +687,98 @@ class ChemBlindAppController {
             this.ui.renderGameStage(this.state, this.roomSession);
           }
         }
+
+        // Guaranteed delivery fallback: sync persistent messages from PostgreSQL
+        if (Array.isArray(newRecord.chat_history) && newRecord.chat_history.length > 0) {
+          this.syncChatHistory(newRecord.chat_history);
+        }
       }
     });
+  }
+
+  /**
+   * Synchronizes chat history loaded from PostgreSQL with deduplication.
+   * @param {Array<Object>} messages
+   */
+  syncChatHistory(messages) {
+    if (!Array.isArray(messages)) return;
+    const mySenderId = getSessionClientId();
+    const myRole = this.roomSession?.role;
+    const myName = myRole === 'player_one' ? this.roomSession?.p1Name : this.roomSession?.p2Name;
+
+    messages.forEach((msg) => {
+      if (!msg || !msg.text) return;
+      const msgId = msg.id || `hist_${msg.timestamp || Date.now()}_${msg.authorName || 'user'}`;
+
+      if (this.renderedMessageIds.has(msgId)) return;
+      this.renderedMessageIds.add(msgId);
+
+      const isOutgoing = (msg.senderId && msg.senderId === mySenderId) ||
+        (msg.authorRole === myRole && msg.authorName === myName);
+
+      this.ui.addChatMessage({
+        authorName: msg.authorName || (isOutgoing ? 'Tú' : 'Tu Cita'),
+        isOutgoing,
+        text: msg.text,
+        timeStr: msg.timeStr,
+        isCardResponse: Boolean(msg.isCardResponse)
+      });
+
+      // If it's a card response from partner for current card, show in quote box
+      if (!isOutgoing && msg.isCardResponse && msg.cardId && this.state?.currentCard?.id === msg.cardId) {
+        this.ui.showResponseDisplay(msg.authorName || 'Tu Cita', msg.text, false);
+      }
+    });
+  }
+
+  /**
+   * Processes an incoming message (via broadcast or DB) with zero message loss and instant popup.
+   * @param {Object} payload
+   */
+  handleIncomingMessage(payload) {
+    if (!payload || !payload.text) return;
+    const msgId = payload.id || `msg_${payload.timestamp || Date.now()}_${payload.authorName || 'partner'}`;
+
+    if (this.renderedMessageIds.has(msgId)) return;
+
+    const mySenderId = getSessionClientId();
+    const myRole = this.roomSession?.role;
+    const myName = myRole === 'player_one' ? this.roomSession?.p1Name : this.roomSession?.p2Name;
+
+    // Distinguish sender by session ID, role, and name so cross-tab and cross-device both work reliably
+    const isOutgoing = (payload.senderId && payload.senderId === mySenderId) ||
+      (payload.authorRole === myRole && payload.authorName === myName);
+
+    if (isOutgoing) return;
+
+    this.renderedMessageIds.add(msgId);
+
+    // 1. Add incoming bubble to chat thread
+    const timeStr = payload.timeStr || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    this.ui.addChatMessage({
+      authorName: payload.authorName || 'Tu Cita',
+      isOutgoing: false,
+      text: payload.text,
+      timeStr,
+      isCardResponse: Boolean(payload.isCardResponse)
+    });
+
+    // 2. If it is a card response for the active card, update card quote box
+    if (payload.isCardResponse && (!payload.cardId || payload.cardId === this.state?.currentCard?.id)) {
+      this.ui.showResponseDisplay(payload.authorName || 'Tu Cita', payload.text, false);
+    }
+
+    // 3. Just like Facebook Messenger: automatically pop open the conversation modal!
+    this.ui.setChatModalOpen(true);
+
+    // 4. Update affinity score if present
+    if (typeof payload.chemistryScore === 'number' && this.state) {
+      this.state.chemistryScore = payload.chemistryScore;
+      this.ui.renderChemistry(payload.chemistryScore);
+    }
+
+    // 5. Toast notification
+    this.ui.showToast(`💬 ${payload.authorName || 'Tu Cita'}: "${payload.text.substring(0, 36)}..."`);
   }
 
   syncRoomState(actionType) {
@@ -754,7 +833,7 @@ class ChemBlindAppController {
   /**
    * Handles in-app submission of a card response.
    */
-  handleSendResponse() {
+  async handleSendResponse() {
     if (!this.state || !this.state.currentCard) return;
 
     const inputEl = this.ui.elements.cardResponseInput;
@@ -782,11 +861,15 @@ class ChemBlindAppController {
       authorName = activePlayer?.name || 'Jugador';
     }
 
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const msgId = `resp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const senderId = getSessionClientId();
+
     // 1. Display locally on the card with edit permission
     this.ui.showResponseDisplay(authorName, text, true);
 
     // 2. Add to chat thread as an outgoing card response bubble
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    this.renderedMessageIds.add(msgId);
     this.ui.addChatMessage({
       authorName,
       isOutgoing: true,
@@ -803,10 +886,12 @@ class ChemBlindAppController {
     this.state.chemistryScore = newScore;
     this.ui.renderChemistry(newScore);
 
-    // 5. Broadcast in 2-phone room session
-    if (this.roomSession?.channel) {
+    // 5. Broadcast in room session and persist in PostgreSQL
+    if (this.roomSession) {
       const cardPrompt = this.ui.elements.cardPromptText?.textContent || '';
-      broadcastRoomEvent(this.roomSession.channel, 'CARD_RESPONSE', {
+      const messagePayload = {
+        id: msgId,
+        senderId,
         cardId: this.state.currentCard.id,
         cardPrompt,
         authorName,
@@ -816,7 +901,15 @@ class ChemBlindAppController {
         isCardResponse: true,
         chemistryScore: newScore,
         timestamp: Date.now()
-      });
+      };
+
+      // Realtime WebSocket broadcast
+      if (this.roomSession.channel) {
+        broadcastRoomEvent(this.roomSession.channel, 'CARD_RESPONSE', messagePayload);
+      }
+
+      // Atomic persistence in PostgreSQL
+      saveRoomMessage(this.roomSession.code, messagePayload);
 
       this.syncRoomState('CARD_RESPONSE');
       this.ui.showToast('¡Respuesta enviada a tu cita! ✦');
@@ -828,7 +921,7 @@ class ChemBlindAppController {
   /**
    * Handles sending a direct chat message from the conversation modal.
    */
-  handleSendChatMessage() {
+  async handleSendChatMessage() {
     const inputEl = this.ui.elements.chatModalInput;
     const text = inputEl ? inputEl.value.trim() : '';
     if (!text) return;
@@ -847,8 +940,11 @@ class ChemBlindAppController {
     }
 
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const msgId = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const senderId = getSessionClientId();
 
     // Add outgoing bubble locally
+    this.renderedMessageIds.add(msgId);
     this.ui.addChatMessage({
       authorName,
       isOutgoing: true,
@@ -861,16 +957,24 @@ class ChemBlindAppController {
       inputEl.value = '';
     }
 
-    // Broadcast if connected in room
-    if (this.roomSession?.channel) {
-      broadcastRoomEvent(this.roomSession.channel, 'CHAT_MESSAGE', {
+    // Broadcast if connected in room and persist in PostgreSQL
+    if (this.roomSession) {
+      const messagePayload = {
+        id: msgId,
+        senderId,
         authorName,
         authorRole,
         text,
         timeStr,
         isCardResponse: false,
         timestamp: Date.now()
-      });
+      };
+
+      if (this.roomSession.channel) {
+        broadcastRoomEvent(this.roomSession.channel, 'CHAT_MESSAGE', messagePayload);
+      }
+
+      saveRoomMessage(this.roomSession.code, messagePayload);
     }
   }
 
@@ -883,6 +987,8 @@ class ChemBlindAppController {
       }
     }
     this.roomSession = null;
+    this.renderedMessageIds.clear();
+    this.ui.clearChatMessages();
     this.refreshActiveRooms();
   }
 

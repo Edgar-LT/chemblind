@@ -102,6 +102,8 @@ export class UIManager {
       openChatModalBtn: byId('open-chat-modal-btn'),
 
       // Realtime Conversation Modal (Facebook Messenger / Haute Horlogerie Style)
+      navChatBtn: byId('nav-chat-btn'),
+      floatingChatTrigger: byId('floating-chat-trigger'),
       chatConversationModal: byId('chat-conversation-modal'),
       chatModalPartnerName: byId('chat-modal-partner-name'),
       closeChatModalBtn: byId('close-chat-modal-btn'),
@@ -159,6 +161,8 @@ export class UIManager {
     this.elements.onboardingScreen?.classList.add('is-hidden');
     this.elements.roomWaitingScreen?.classList.add('is-hidden');
     this.elements.gameScreen?.classList.add('is-hidden');
+    this.elements.navChatBtn?.classList.add('is-hidden');
+    this.elements.floatingChatTrigger?.classList.add('is-hidden');
 
     if (screen === 'onboarding') {
       this.elements.onboardingScreen?.classList.remove('is-hidden');
@@ -185,6 +189,8 @@ export class UIManager {
       this.elements.gameScreen?.classList.remove('is-hidden');
       this.elements.changePlayersBtn?.classList.remove('is-hidden');
       this.elements.openCustomModalBtn?.classList.remove('is-hidden');
+      this.elements.navChatBtn?.classList.remove('is-hidden');
+      this.elements.floatingChatTrigger?.classList.remove('is-hidden');
     }
   }
 
@@ -539,6 +545,20 @@ export class UIManager {
    */
   isChatModalOpen() {
     return Boolean(this.elements.chatConversationModal?.classList.contains('is-open'));
+  }
+
+  /**
+   * Resets the chat messages feed to its initial empty placeholder state.
+   */
+  clearChatMessages() {
+    const list = this.elements.chatModalMessages;
+    if (!list) return;
+    list.innerHTML = `
+      <div class="chat-empty-state">
+        <span class="chat-empty-icon">💬</span>
+        <p>Aún no hay mensajes. ¡Sé el primero en escribir o responde a la carta!</p>
+      </div>
+    `;
   }
 
   /**

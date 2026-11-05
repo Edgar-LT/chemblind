@@ -14,7 +14,7 @@
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <link rel="stylesheet" href="./css/styles.css?v=2.2.1" />
+  <link rel="stylesheet" href="./css/styles.css?v=2.3.0" />
 </head>
 <body>
 
@@ -38,6 +38,12 @@
 
         <button type="button" id="open-custom-modal-btn" class="icon-btn is-hidden">
           <span>+ Crear Pregunta</span>
+        </button>
+
+        <!-- Botón de Chat en Cabecera -->
+        <button type="button" id="nav-chat-btn" class="nav-chat-btn is-hidden" title="Abrir chat en directo">
+          <span>💬</span>
+          <span class="nav-chat-label">Chat</span>
         </button>
 
         <button type="button" id="view-rooms-btn" class="icon-btn" title="Ver mis salas activas">
@@ -565,9 +571,15 @@
     </div>
   </div>
 
+  <!-- Botón Flotante para Abrir Chat en Vivo (Estilo Messenger) -->
+  <button type="button" id="floating-chat-trigger" class="floating-chat-trigger is-hidden" title="Abrir chat en directo" aria-label="Abrir conversación">
+    <span class="floating-chat-icon">💬</span>
+    <span class="floating-chat-text">Chat</span>
+  </button>
+
   <!-- Notificación Toast Discreta -->
   <div id="toast-notification" class="toast-notification" role="status" aria-live="polite"></div>
 
-  <script type="module" src="./js/app.js"></script>
+  <script type="module" src="./js/app.js?v=2.3.0"></script>
 </body>
 </html>

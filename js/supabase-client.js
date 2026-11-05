@@ -62,6 +62,27 @@ export function getDeviceId() {
   }
 }
 
+let cachedSessionClientId = null;
+
+/**
+ * Gets or creates a session-unique client ID per tab/window.
+ * Ensures distinct author identification even when tested across multiple tabs in the same browser.
+ * @returns {string}
+ */
+export function getSessionClientId() {
+  if (cachedSessionClientId) return cachedSessionClientId;
+  try {
+    cachedSessionClientId = sessionStorage.getItem('chemblind_tab_session_id');
+    if (!cachedSessionClientId) {
+      cachedSessionClientId = 'sess-' + Math.random().toString(36).slice(2, 9) + '-' + Date.now().toString(36);
+      sessionStorage.setItem('chemblind_tab_session_id', cachedSessionClientId);
+    }
+  } catch (e) {
+    cachedSessionClientId = 'sess-fallback-' + Date.now();
+  }
+  return cachedSessionClientId;
+}
+
 /**
  * Calls the secure RPC in Postgres to create a new game room with rate limiting.
  * @param {Object} params
@@ -198,6 +219,8 @@ export async function fetchRoomData(code, accessToken) {
 
 /**
  * Subscribes to room updates via Realtime Broadcast & Postgres Changes.
+ * Guaranteed delivery: safely queues broadcasts until channel is SUBSCRIBED,
+ * and eliminates duplicate channel subscriptions.
  * @param {string} roomCode
  * @param {Object} handlers
  * @param {Function} handlers.onStateUpdate
@@ -213,8 +236,26 @@ export function subscribeToRoomChannel(roomCode, { onStateUpdate, onPlayerJoined
   try {
     const channelName = `chemblind:${roomCode}`;
 
+    // Clean up prior channel instances if any
+    try {
+      const existingChannels = typeof supabase.getChannels === 'function' ? supabase.getChannels() : [];
+      const match = existingChannels.find((ch) => ch.topic === `realtime:${channelName}` || ch.topic === channelName);
+      if (match) {
+        supabase.removeChannel(match);
+      }
+    } catch (e) {
+      // Ignore channel lookup warnings
+    }
+
+    const pendingQueue = [];
+    let isSubscribed = false;
+
     const channel = supabase
-      .channel(channelName)
+      .channel(channelName, {
+        config: {
+          broadcast: { ack: true, self: false }
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -230,18 +271,47 @@ export function subscribeToRoomChannel(roomCode, { onStateUpdate, onPlayerJoined
         }
       )
       .on('broadcast', { event: 'PLAYER_JOINED' }, (payload) => {
-        if (onPlayerJoined) onPlayerJoined(payload.payload);
+        if (onPlayerJoined) onPlayerJoined(payload.payload || payload);
       })
       .on('broadcast', { event: 'CARD_ACTION' }, (payload) => {
-        if (onCardAction) onCardAction(payload.payload);
+        if (onCardAction) onCardAction(payload.payload || payload);
       })
       .on('broadcast', { event: 'CARD_RESPONSE' }, (payload) => {
-        if (onCardResponse) onCardResponse(payload.payload);
+        if (onCardResponse) onCardResponse(payload.payload || payload);
       })
       .on('broadcast', { event: 'CHAT_MESSAGE' }, (payload) => {
-        if (onCardResponse) onCardResponse(payload.payload);
-      })
-      .subscribe();
+        if (onCardResponse) onCardResponse(payload.payload || payload);
+      });
+
+    channel.subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        isSubscribed = true;
+        console.log('[ChemBlind/Realtime] Canal conectado exitosamente:', channelName);
+
+        // Flush any queued broadcasts immediately upon connection
+        while (pendingQueue.length > 0) {
+          const item = pendingQueue.shift();
+          channel.send(item).catch((sendErr) => {
+            console.warn('[ChemBlind/Realtime] Error enviando broadcast en cola:', sendErr);
+          });
+        }
+      } else if (status === 'CHANNEL_ERROR') {
+        console.warn('[ChemBlind/Realtime] Error en canal Realtime:', channelName, err);
+      }
+    });
+
+    // Attach safe sender to channel instance
+    channel.__safeSend = async (message) => {
+      if (isSubscribed) {
+        try {
+          return await channel.send(message);
+        } catch (e) {
+          console.warn('[ChemBlind/Realtime] Error en channel.send:', e);
+        }
+      } else {
+        pendingQueue.push(message);
+      }
+    };
 
     return channel;
   } catch (err) {
@@ -252,20 +322,57 @@ export function subscribeToRoomChannel(roomCode, { onStateUpdate, onPlayerJoined
 
 /**
  * Broadcasts an instant event across connected devices in the room.
+ * Uses channel.__safeSend to prevent silent dropping if socket is connecting.
  * @param {Object} channel
  * @param {string} event
  * @param {Object} payload
  */
 export async function broadcastRoomEvent(channel, event, payload) {
-  if (!channel || typeof channel.send !== 'function') return;
+  if (!channel) return;
+  const message = {
+    type: 'broadcast',
+    event,
+    payload
+  };
+
+  if (typeof channel.__safeSend === 'function') {
+    return channel.__safeSend(message);
+  }
+
+  if (typeof channel.send === 'function') {
+    try {
+      return await channel.send(message);
+    } catch (err) {
+      console.warn('[ChemBlind/Supabase] Error en broadcast:', err);
+    }
+  }
+}
+
+/**
+ * Persists a message (card response or direct chat message) atomically in PostgreSQL.
+ * @param {string} roomCode
+ * @param {Object} messageObj
+ * @returns {Promise<Array<Object>>}
+ */
+export async function saveRoomMessage(roomCode, messageObj) {
+  const supabase = getSupabase();
+  if (!supabase || !roomCode) return [];
+
   try {
-    await channel.send({
-      type: 'broadcast',
-      event,
-      payload
+    const { data, error } = await supabase.rpc('append_room_message', {
+      p_code: roomCode,
+      p_message: messageObj
     });
+
+    if (error) {
+      console.warn('[ChemBlind/Supabase] Advertencia al persistir mensaje en sala:', error.message);
+      return [];
+    }
+
+    return Array.isArray(data) ? data : [];
   } catch (err) {
-    console.warn('[ChemBlind/Supabase] Error en broadcast:', err);
+    console.warn('[ChemBlind/Supabase] Error en saveRoomMessage:', err);
+    return [];
   }
 }
 
