@@ -183,6 +183,17 @@
   color: #111215;
 }
 
+[data-theme="light"] .btn-card-chat {
+  background: #ffffff;
+  border: 1px solid rgba(17, 18, 21, 0.14);
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .btn-card-chat:hover {
+  background: #fbfbfd;
+  border-color: var(--accent-champagne);
+}
+
 /* Píldoras y Controles de Navegación */
 [data-theme="light"] .players-pill,
 [data-theme="light"] .icon-btn {
@@ -1060,6 +1071,31 @@ textarea {
   justify-content: flex-end;
   align-items: center;
   gap: 10px;
+}
+
+.btn-card-chat {
+  padding: 8px 16px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-hairline);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-horology);
+}
+
+.btn-card-chat:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-gold);
+  color: var(--text-primary);
+}
+
+.chat-btn-icon {
+  font-size: 0.9rem;
 }
 
 .btn-send-response {

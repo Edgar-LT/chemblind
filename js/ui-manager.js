@@ -93,6 +93,7 @@ export class UIManager {
       cardResponseInput: byId('card-response-input'),
       responseCharCount: byId('response-char-count'),
       sendResponseBtn: byId('send-response-btn'),
+      cardOpenChatBtn: byId('card-open-chat-btn'),
       responseDisplayBox: byId('response-display-box'),
       responseAuthorName: byId('response-author-name'),
       responseDisplayText: byId('response-display-text'),

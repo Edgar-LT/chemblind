@@ -247,6 +247,10 @@ class ChemBlindAppController {
     });
 
     // Conversation Chat Modal Controls
+    el.cardOpenChatBtn?.addEventListener('click', () => {
+      this.ui.setChatModalOpen(true);
+    });
+
     el.openChatModalBtn?.addEventListener('click', () => {
       this.ui.setChatModalOpen(true);
     });
