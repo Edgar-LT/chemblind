@@ -20,6 +20,7 @@ export class UIManager {
       changePlayersBtn: byId('change-players-btn'),
       navPlayersLabel: byId('nav-players-label'),
       navModeBadge: byId('nav-mode-badge'),
+      navRoomsAvailableTag: byId('nav-rooms-available-tag'),
       viewRoomsBtn: byId('view-rooms-btn'),
       activeRoomsCountLabel: byId('active-rooms-count-label'),
       openCustomModalBtn: byId('open-custom-modal-btn'),
@@ -45,6 +46,7 @@ export class UIManager {
       activeRoomsModal: byId('active-rooms-modal'),
       closeRoomsModalBtn: byId('close-rooms-modal-btn'),
       closeRoomsModalBtn2: byId('close-rooms-modal-btn-2'),
+      modalExitGameBtn: byId('modal-exit-game-btn'),
       activeRoomsList: byId('active-rooms-list'),
 
       // Guest Join Form (active if opened via invite link)
@@ -255,6 +257,17 @@ export class UIManager {
       this.elements.navModeBadge.textContent = roomSession
         ? `Sala ${roomSession.code}`
         : modeMeta.shortLabel;
+    }
+
+    // Hide standalone view-rooms-btn in game (it is unified into change-players-btn)
+    this.elements.viewRoomsBtn?.classList.add('is-hidden');
+
+    if (this.elements.modalExitGameBtn) {
+      if (roomSession) {
+        this.elements.modalExitGameBtn.classList.remove('is-hidden');
+      } else {
+        this.elements.modalExitGameBtn.classList.add('is-hidden');
+      }
     }
 
     // Level selector tabs
@@ -648,7 +661,7 @@ export class UIManager {
 
       const quoteLabel = document.createElement('span');
       quoteLabel.className = 'chat-quoted-label';
-      quoteLabel.textContent = isCardResponse ? '✦ Respuesta a la carta' : '✦ Pregunta en juego';
+      quoteLabel.textContent = isCardResponse ? 'Respuesta a la carta' : 'Pregunta en juego';
 
       const quoteText = document.createElement('p');
       quoteText.className = 'chat-quoted-text';
@@ -660,7 +673,7 @@ export class UIManager {
     } else if (isCardResponse) {
       const badge = document.createElement('span');
       badge.className = 'chat-bubble-badge';
-      badge.textContent = '✦ Respuesta a la carta';
+      badge.textContent = 'Respuesta a la carta';
       bubbleDiv.appendChild(badge);
     }
 
@@ -679,16 +692,33 @@ export class UIManager {
 
   updateActiveRoomsCount(count, isRoomSelected) {
     if (this.elements.activeRoomsCountLabel) {
-      this.elements.activeRoomsCountLabel.textContent = `Salas (${count}/3)`;
+      if (count <= 0) {
+        this.elements.activeRoomsCountLabel.textContent = 'Salas disponibles';
+      } else if (count === 1) {
+        this.elements.activeRoomsCountLabel.textContent = '1 sala disponible';
+      } else {
+        this.elements.activeRoomsCountLabel.textContent = `${count} salas disponibles`;
+      }
     }
+
+    // Unified pill inside active game session
+    if (this.elements.navRoomsAvailableTag) {
+      if (count > 0) {
+        this.elements.navRoomsAvailableTag.classList.remove('is-hidden');
+        this.elements.navRoomsAvailableTag.textContent = `${count} ${count === 1 ? 'disponible' : 'disponibles'}`;
+      } else {
+        this.elements.navRoomsAvailableTag.classList.add('is-hidden');
+      }
+    }
+
     if (this.elements.activeRoomsBanner) {
       if (count > 0 && isRoomSelected) {
         this.elements.activeRoomsBanner.classList.remove('is-hidden');
         if (this.elements.activeRoomsBannerText) {
           this.elements.activeRoomsBannerText.textContent =
             count === 1
-              ? 'Tienes 1 sala activa en este dispositivo.'
-              : `Tienes ${count} salas activas (máximo 3).`;
+              ? 'Tienes 1 sala activa en tu dispositivo.'
+              : `Tienes ${count} salas activas en tu dispositivo.`;
         }
       } else {
         this.elements.activeRoomsBanner.classList.add('is-hidden');

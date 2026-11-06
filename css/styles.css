@@ -470,6 +470,29 @@ textarea {
   gap: 10px;
 }
 
+
+.pill-rooms-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-champagne-soft);
+  color: var(--accent-champagne);
+  border: 1px solid var(--border-gold);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.pill-arrow-icon {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  transition: transform 0.2s var(--ease-horology);
+}
+
+.players-pill:hover .pill-arrow-icon {
+  transform: translateY(1px);
+}
+
 .players-pill {
   display: inline-flex;
   align-items: center;
@@ -2028,44 +2051,252 @@ textarea {
    Responsividad Móvil
    ========================================================================== */
 
+
+/* ==========================================================================
+   Experiencia Móvil App-Like de Alta Gama (iOS / Android Native Feel)
+   ========================================================================== */
+
 @media (max-width: 640px) {
-  .onboarding-card {
-    padding: 30px 22px;
+  html, body {
+    height: 100%;
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .input-row,
-  .setup-mode-grid,
-  .setup-level-grid {
-    grid-template-columns: 1fr;
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
-  .playing-card {
-    padding: 28px 22px;
-    min-height: 360px;
+  /* Barra Superior en Móvil */
+  .frosted-nav {
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .nav-inner {
+    gap: 6px;
+  }
+
+  .brand-name {
+    display: none !important; /* Monograma CB minimalista */
+  }
+
+  .brand-emblem {
+    width: 34px;
+    height: 34px;
+    font-size: 0.74rem;
+    flex-shrink: 0;
+  }
+
+  .nav-controls {
+    gap: 5px;
+    flex-wrap: nowrap;
+  }
+
+  .nav-custom-text,
+  #theme-label {
+    display: none !important; /* Iconos puros para ahorrar ancho */
+  }
+
+  .players-pill {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    max-width: 175px;
+    gap: 5px;
+  }
+
+  .players-pill #nav-players-label {
+    display: none; /* Dejar solo la sala y el estado en pantallas estrechas */
+  }
+
+  .pill-divider {
+    display: none;
+  }
+
+  .icon-btn,
+  .nav-chat-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    min-height: 36px;
+  }
+
+  /* Escenario del Juego en Móvil */
+  .main-stage {
+    padding: 10px 12px 24px;
+  }
+
+  .game-screen {
+    max-width: 100%;
+    gap: 12px;
   }
 
   .game-top-bar {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
   }
 
   .level-selector {
-    justify-content: space-between;
+    flex: 1;
+    min-width: 0;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .level-tab {
+    padding: 6px 6px;
+    font-size: 0.72rem;
+    flex: 1;
+    text-align: center;
+    white-space: nowrap;
   }
 
   .chemistry-pill {
-    justify-content: space-between;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .playing-card {
+    padding: 22px 18px 20px;
+    min-height: auto;
+    border-radius: 20px;
+  }
+
+  .card-prompt-text {
+    font-size: clamp(1.22rem, 5.2vw, 1.55rem);
+    line-height: 1.36;
+    margin: 16px 0 10px;
+  }
+
+  .card-prompt-hint {
+    font-size: 0.84rem;
+    line-height: 1.4;
+  }
+
+  .card-chat-action-container {
+    margin-top: 18px;
+    margin-bottom: 4px;
+  }
+
+  .btn-card-open-chat {
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 18px;
+    font-size: 0.95rem;
+    border-radius: 9999px;
   }
 
   .card-footer {
-    flex-direction: column-reverse;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
   }
 
   .footer-secondary-actions {
-    justify-content: space-between;
+    flex: 1;
+    display: flex;
+  }
+
+  .footer-secondary-actions #wildcard-skip-btn {
+    width: 100%;
+    min-height: 48px;
+    border-radius: 9999px;
+    font-size: 0.88rem;
+    justify-content: center;
+  }
+
+  .btn-flagship#complete-turn-btn {
+    flex: 2;
+    min-height: 48px;
+    border-radius: 9999px;
+    font-size: 0.95rem;
+    justify-content: center;
+  }
+
+  /* Modal de Chat tipo Bottom Sheet Nativo en Móvil */
+  #chat-conversation-modal.modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  #chat-conversation-modal .chat-modal-dialog {
+    width: 100%;
+    max-width: 100%;
+    height: 92dvh;
+    max-height: 92dvh;
+    border-radius: 24px 24px 0 0;
+    margin: 0;
+    padding: 16px 16px max(14px, env(safe-area-inset-bottom));
+    border-bottom: none;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+  }
+
+  #chat-conversation-modal .chat-modal-messages-feed {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    overscroll-behavior: contain;
+  }
+
+  #chat-conversation-modal .chat-modal-input-row {
+    padding-top: 10px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+  }
+
+  /* Modal de Salas tipo Bottom Sheet en Móvil */
+  #active-rooms-modal.modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  #active-rooms-modal .modal-dialog {
+    width: 100%;
+    max-width: 100%;
+    max-height: 85dvh;
+    border-radius: 24px 24px 0 0;
+    margin: 0;
+    padding: 20px 18px max(20px, env(safe-area-inset-bottom));
+    border-bottom: none;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+  }
+
+  /* Modal Personalizado tipo Bottom Sheet en Móvil */
+  #custom-card-modal.modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  #custom-card-modal .modal-dialog {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 24px 24px 0 0;
+    margin: 0;
+    padding: 22px 18px max(20px, env(safe-area-inset-bottom));
+    border-bottom: none;
+  }
+
+  /* Botón Flotante en Móvil */
+  .floating-chat-trigger {
+    bottom: max(16px, env(safe-area-inset-bottom));
+    right: 14px;
+    height: 48px;
+    padding: 0 16px;
+    border-radius: 9999px;
   }
 }
+
 
 
 /* =========================================================================

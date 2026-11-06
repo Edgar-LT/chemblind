@@ -208,7 +208,7 @@
     <header class="standalone-chat-header">
       <div class="standalone-header-left">
         <div class="standalone-avatar">
-          <span>✦</span>
+          <span>💬</span>
           <span class="standalone-status-dot"></span>
         </div>
         <div class="standalone-meta">
@@ -243,7 +243,7 @@
   </div>
 
   <script type="module">
-    import { ChatRoomAPI } from './js/chat-service.js?v=2.3.8';
+    import { ChatRoomAPI } from './js/chat-service.js?v=2.3.9';
 
     const params = new URLSearchParams(window.location.search);
     const roomCode = params.get('room') || prompt('Ingresa el código de la sala (Ej: CB-XXXX):') || '';
@@ -280,7 +280,7 @@
         quote.className = 'chat-quoted-reply';
         const label = document.createElement('span');
         label.className = 'chat-quoted-label';
-        label.textContent = msg.isCardResponse ? '✦ Respuesta a la carta' : '✦ Pregunta en juego';
+        label.textContent = msg.isCardResponse ? 'Respuesta a la carta' : 'Pregunta en juego';
         const p = document.createElement('p');
         p.className = 'chat-quoted-text';
         p.textContent = `"${msg.cardPrompt}"`;
@@ -290,7 +290,7 @@
       } else if (msg.isCardResponse) {
         const badge = document.createElement('span');
         badge.className = 'chat-bubble-badge';
-        badge.textContent = '✦ Respuesta a la carta';
+        badge.textContent = 'Respuesta a la carta';
         bubble.appendChild(badge);
       }
 

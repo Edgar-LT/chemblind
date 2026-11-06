@@ -183,7 +183,7 @@ class ChemBlindAppController {
 
     el.whatsappRoomLinkBtn?.addEventListener('click', () => {
       if (!this.roomSession?.inviteUrl) return;
-      const message = `✨ Te invito a jugar a *ChemBlind* (Química para dos):\n\nEntra aquí para conectarte a mi sala: ${this.roomSession.inviteUrl}`;
+      const message = `👋 Te invito a jugar a *ChemBlind* (Química para dos):\n\nEntra aquí para conectarte a mi sala: ${this.roomSession.inviteUrl}`;
       window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
     });
 
@@ -192,14 +192,30 @@ class ChemBlindAppController {
       this.ui.showScreen('onboarding');
     });
 
-    // Change Players (Back to Setup)
+    // Unified Room Hub & Change Players Button
     el.changePlayersBtn?.addEventListener('click', () => {
+      if (this.roomSession) {
+        this.openActiveRoomsModal();
+      } else {
+        this.teardownRoomSession();
+        this.chrono.stop();
+        this.ui.showScreen('onboarding');
+        window.history.replaceState({}, document.title, window.location.pathname);
+        const isRoom = document.querySelector('input[name="sessionType"]:checked')?.value === 'room';
+        this.ui.setSessionType(Boolean(isRoom));
+      }
+    });
+
+    // Exit Game Button inside Active Rooms Modal
+    el.modalExitGameBtn?.addEventListener('click', () => {
+      this.ui.setRoomsModalOpen(false);
       this.teardownRoomSession();
       this.chrono.stop();
       this.ui.showScreen('onboarding');
       window.history.replaceState({}, document.title, window.location.pathname);
       const isRoom = document.querySelector('input[name="sessionType"]:checked')?.value === 'room';
       this.ui.setSessionType(Boolean(isRoom));
+      this.ui.showToast('Partida finalizada.');
     });
 
     // Intensity Level Tabs
@@ -1095,7 +1111,7 @@ class ChemBlindAppController {
       }
 
       this.syncRoomState('CARD_RESPONSE');
-      this.ui.showToast('¡Respuesta enviada a tu cita! ✦');
+      this.ui.showToast('¡Respuesta enviada a tu cita!');
     } else {
       this.ui.addChatMessage({
         authorName,
@@ -1105,7 +1121,7 @@ class ChemBlindAppController {
         isCardResponse: true,
         cardPrompt
       });
-      this.ui.showToast('¡Respuesta guardada en la conversación! ✦');
+      this.ui.showToast('¡Respuesta guardada en la conversación!');
     }
   }
 
@@ -1187,7 +1203,7 @@ class ChemBlindAppController {
   }
 
   async openActiveRoomsModal() {
-    if (this.pendingInvite || this.roomSession?.role === 'player_two') return;
+    if (this.pendingInvite) return;
     await this.refreshActiveRooms();
 
     this.ui.renderActiveRooms(

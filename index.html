@@ -2,7 +2,11 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0a0a0c" />
   <title>CHEMBLIND — Chemistry Unfiltered</title>
   <meta name="description" content="Juego interactivo de citas, preguntas íntimas y retos para descubrir la química entre dos personas." />
 
@@ -14,7 +18,7 @@
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <link rel="stylesheet" href="./css/styles.css?v=2.3.8" />
+  <link rel="stylesheet" href="./css/styles.css?v=2.3.9" />
 </head>
 <body>
 
@@ -27,17 +31,19 @@
       </div>
 
       <div class="nav-controls">
-        <!-- Píldora de jugadores y modalidad -->
-        <button type="button" id="change-players-btn" class="players-pill is-hidden" title="Cambiar modalidad o configuración">
+        <!-- Píldora unificada de sesión y salas activas -->
+        <button type="button" id="change-players-btn" class="players-pill is-hidden" title="Ver sala actual y administrar salas">
           <span class="dot-active"></span>
-          <span id="nav-players-label">Jugadores</span>
+          <span id="nav-mode-badge" class="pill-mode-tag">Sala</span>
           <span class="pill-divider">·</span>
-          <span id="nav-mode-badge" class="pill-mode-tag">Presencial</span>
-          <span class="pill-edit-icon">✎</span>
+          <span id="nav-players-label">Jugadores</span>
+          <span id="nav-rooms-available-tag" class="pill-rooms-tag is-hidden"></span>
+          <span class="pill-edit-icon">▾</span>
         </button>
 
-        <button type="button" id="open-custom-modal-btn" class="icon-btn is-hidden">
-          <span>+ Crear Pregunta</span>
+        <button type="button" id="open-custom-modal-btn" class="icon-btn is-hidden" title="Crear pregunta propia">
+          <span class="nav-custom-icon">+</span>
+          <span class="nav-custom-text">Crear Pregunta</span>
         </button>
 
         <!-- Botón de Chat en Cabecera -->
@@ -46,12 +52,13 @@
           <span class="nav-chat-label">Chat</span>
         </button>
 
-        <button type="button" id="view-rooms-btn" class="icon-btn" title="Ver mis salas activas">
+        <!-- Botón de Salas (visible en Onboarding si hay salas activas) -->
+        <button type="button" id="view-rooms-btn" class="icon-btn is-hidden" title="Ver salas disponibles">
           <span class="dot-active" style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent-champagne);"></span>
-          <span id="active-rooms-count-label">Salas (0/3)</span>
+          <span id="active-rooms-count-label">Salas disponibles</span>
         </button>
 
-        <button type="button" id="theme-toggle-btn" class="icon-btn" aria-label="Alternar tema de color">
+        <button type="button" id="theme-toggle-btn" class="icon-btn" aria-label="Alternar tema de color" title="Alternar tema claro/oscuro">
           <span>◐</span>
           <span id="theme-label">Marfil</span>
         </button>
@@ -373,7 +380,6 @@
             <button type="button" id="card-open-chat-btn" class="btn-card-open-chat" title="Abrir chat grupal en directo">
               <span class="chat-btn-icon">💬</span>
               <span class="chat-btn-label">Abrir Chat Grupal</span>
-              <span class="chat-btn-spark">✦</span>
             </button>
           </div>
         </div><!-- Pie de la Carta: Acciones Limpias -->
@@ -461,15 +467,17 @@
       </div>
 
       <p class="modal-desc">
-        Puedes tener hasta 3 salas activas (duración de 3h). Elige una sala para reanudar la partida o ciérrala para liberar espacio.
+        Elige una sala para reanudar o cambiar de partida en cualquier momento.
       </p>
 
       <div id="active-rooms-list" class="active-rooms-list">
         <p class="empty-rooms-msg">No tienes salas activas en este momento.</p>
       </div>
 
-      <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 0.75rem; color: var(--text-secondary);">Máximo 3 salas por dispositivo.</span>
+      <div class="modal-footer-row" style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+        <button type="button" id="modal-exit-game-btn" class="btn-ghost is-hidden" style="color: #ff453a; font-size: 0.82rem;">
+          ✕ Salir de la partida
+        </button>
         <button type="button" id="close-rooms-modal-btn-2" class="btn-ghost">Cerrar</button>
       </div>
     </div>
@@ -484,7 +492,7 @@
       <div class="modal-header chat-modal-header">
         <div class="chat-header-user">
           <div class="chat-header-avatar">
-            <span>✦</span>
+            <span>💬</span>
             <span class="chat-online-dot" title="En línea"></span>
           </div>
           <div class="chat-header-meta">
@@ -532,6 +540,6 @@
   <!-- Notificación Toast Discreta -->
   <div id="toast-notification" class="toast-notification" role="status" aria-live="polite"></div>
 
-  <script type="module" src="./js/app.js?v=2.3.8"></script>
+  <script type="module" src="./js/app.js?v=2.3.9"></script>
 </body>
 </html>
