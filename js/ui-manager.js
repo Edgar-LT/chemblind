@@ -77,8 +77,9 @@ export class UIManager {
       cardPromptText: byId('card-prompt-text'),
       cardPromptHint: byId('card-prompt-hint'),
 
-      // Inline Timer
+      // Inline Timer (Top Header Watch Dial)
       inlineTimerBox: byId('inline-timer-box'),
+      chronoRingProgress: byId('chrono-ring-progress'),
       chronoSecondsReadout: byId('chrono-seconds-readout'),
       chronoToggleBtn: byId('chrono-toggle-btn'),
       chronoResetBtn: byId('chrono-reset-btn'),
@@ -327,13 +328,27 @@ export class UIManager {
     }
   }
 
-  renderTimer(remainingSec, isRunning) {
+  renderTimer(remainingSec, isRunning, fraction = 1) {
     const displaySeconds = Math.ceil(remainingSec);
     if (this.elements.chronoSecondsReadout) {
       this.elements.chronoSecondsReadout.textContent = `${String(displaySeconds).padStart(2, '0')}s`;
     }
+    if (this.elements.inlineTimerBox) {
+      this.elements.inlineTimerBox.classList.toggle('is-running', Boolean(isRunning));
+    }
     if (this.elements.chronoToggleBtn) {
-      this.elements.chronoToggleBtn.textContent = isRunning ? 'Pausar' : 'Iniciar Reto';
+      const actionLabel = isRunning
+        ? 'Pausar cronómetro del reto'
+        : 'Toca el reloj para iniciar el reto';
+      this.elements.chronoToggleBtn.title = actionLabel;
+      this.elements.chronoToggleBtn.setAttribute('aria-label', actionLabel);
+    }
+    if (this.elements.chronoRingProgress) {
+      const circumference = 94.25; // 2 * Math.PI * 15
+      const clampedFraction = Math.max(0, Math.min(1, Number(fraction) || 0));
+      const offset = circumference * (1 - clampedFraction);
+      this.elements.chronoRingProgress.style.strokeDasharray = `${circumference}`;
+      this.elements.chronoRingProgress.style.strokeDashoffset = `${offset.toFixed(2)}`;
     }
   }
 

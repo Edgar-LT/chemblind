@@ -18,7 +18,7 @@
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <link rel="stylesheet" href="./css/styles.css?v=2.4.5" />
+  <link rel="stylesheet" href="./css/styles.css?v=2.4.6" />
 </head>
 <body>
 
@@ -336,14 +336,51 @@
       <!-- La Carta Central -->
       <article id="stage-card-wrapper" class="playing-card">
 
-        <!-- Cabecera de la Carta: Turno y Categoría -->
+        <!-- Cabecera de la Carta: Turno, Cronógrafo Superior y Categoría -->
         <div class="card-meta-header">
           <div class="turn-indicator">
             <span id="turn-badge-text" class="turn-badge">Turno</span>
             <span id="target-player-label" class="turn-target"></span>
           </div>
 
-          <span id="card-category-badge" class="category-tag">Pregunta</span>
+          <div class="card-header-right">
+            <!-- Cronómetro de Esfera Superior (Solo aparece cuando la carta es un reto con tiempo) -->
+            <div id="inline-timer-box" class="inline-timer-box is-hidden">
+              <button
+                type="button"
+                id="chrono-toggle-btn"
+                class="chrono-watch-btn"
+                title="Toca el reloj para iniciar o pausar el reto"
+                aria-label="Iniciar o pausar cronómetro"
+              >
+                <span class="chrono-dial" aria-hidden="true">
+                  <svg class="chrono-ring-svg" viewBox="0 0 36 36">
+                    <circle class="chrono-ring-track" cx="18" cy="18" r="15"></circle>
+                    <circle
+                      id="chrono-ring-progress"
+                      class="chrono-ring-progress"
+                      cx="18"
+                      cy="18"
+                      r="15"
+                    ></circle>
+                  </svg>
+                  <span class="chrono-center-dot"></span>
+                </span>
+                <span id="chrono-seconds-readout" class="timer-seconds tabular-nums">20s</span>
+              </button>
+              <button
+                type="button"
+                id="chrono-reset-btn"
+                class="btn-timer-reset"
+                title="Reiniciar temporizador"
+                aria-label="Reiniciar temporizador"
+              >
+                ↺
+              </button>
+            </div>
+
+            <span id="card-category-badge" class="category-tag">Pregunta</span>
+          </div>
         </div>
 
         <!-- Cuerpo Principal: La Pregunta o Reto -->
@@ -351,19 +388,6 @@
           <p id="card-prompt-text" class="card-prompt-text"></p>
           <p id="card-prompt-hint" class="card-prompt-hint"></p>
 
-          <!-- Cronómetro Inline (Solo aparece cuando la carta es un reto con tiempo) -->
-          <div id="inline-timer-box" class="inline-timer-box is-hidden">
-            <div class="timer-display">
-              <span class="timer-dot"></span>
-              <span id="chrono-seconds-readout" class="timer-seconds tabular-nums">20s</span>
-            </div>
-            <button type="button" id="chrono-toggle-btn" class="btn-timer-action">
-              Iniciar Reto
-            </button>
-            <button type="button" id="chrono-reset-btn" class="btn-timer-reset" title="Reiniciar reloj">
-              ↺
-            </button>
-          </div>
           <!-- Botón Directo para Abrir el Chat Grupal -->
           <div class="card-chat-action-container">
             <button type="button" id="card-open-chat-btn" class="btn-card-open-chat" title="Abrir chat grupal en directo">

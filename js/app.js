@@ -55,8 +55,8 @@ class ChemBlindAppController {
     this.ui = new UIManager();
     this.chatAPI = new ChatRoomAPI();
     this.chrono = new ChronographService({
-      onTick: ({ remainingSec, isRunning }) => {
-        this.ui.renderTimer(remainingSec, this.chrono.isRunning);
+      onTick: ({ remainingSec, fraction }) => {
+        this.ui.renderTimer(remainingSec, this.chrono.isRunning, fraction);
       },
       onComplete: () => {
         this.ui.showToast('⏱ ¡Reto completado! +5% de Química');
@@ -70,7 +70,9 @@ class ChemBlindAppController {
         }
       },
       onStateChange: (isRunning) => {
-        this.ui.renderTimer(this.chrono.getState().remainingSec, isRunning);
+        const st = this.chrono.getState();
+        const frac = st.durationSec > 0 ? st.exactRemaining / st.durationSec : 0;
+        this.ui.renderTimer(st.remainingSec, isRunning, frac);
       }
     });
   }
@@ -296,6 +298,10 @@ class ChemBlindAppController {
 
     // Chrono Controls
     el.chronoToggleBtn?.addEventListener('click', () => {
+      if (!this.chrono.isRunning && this.chrono.getState().exactRemaining <= 0) {
+        const cardTimer = this.state?.currentCard?.timerSeconds || 20;
+        this.chrono.reset(cardTimer);
+      }
       this.chrono.toggle();
     });
 

@@ -968,6 +968,13 @@ button:focus-visible,
   color: var(--text-secondary);
 }
 
+.card-header-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
 .category-tag {
   font-size: 0.72rem;
   text-transform: uppercase;
@@ -996,56 +1003,132 @@ button:focus-visible,
   color: var(--text-secondary);
 }
 
-/* Cronómetro Inline (Solo aparece cuando la carta lleva tiempo) */
+/* Cronógrafo de Esfera Superior (Haute Horlogerie Depleting Ring + Reset Arrow) */
 .inline-timer-box {
-  margin-top: 8px;
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  align-self: flex-start;
-  padding: 8px 14px;
+  gap: 6px;
+  padding: 3px 6px 3px 5px;
   border-radius: var(--radius-pill);
   background: var(--bg-subtle);
   border: 1px solid var(--border-gold);
+  transition: border-color 0.25s var(--ease-horology),
+              box-shadow 0.25s var(--ease-horology),
+              background 0.25s var(--ease-horology);
 }
 
-.timer-display {
+.inline-timer-box.is-running {
+  background: var(--accent-champagne-soft);
+  border-color: var(--accent-champagne);
+  box-shadow: 0 0 14px rgba(197, 160, 89, 0.22);
+}
+
+.chrono-watch-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
+  background: transparent;
+  border: none;
+  padding: 2px 5px 2px 2px;
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: opacity 0.2s var(--ease-horology),
+              transform 0.2s var(--ease-horology);
 }
 
-.timer-dot {
-  width: 7px;
-  height: 7px;
+.chrono-watch-btn:hover {
+  opacity: 0.92;
+}
+
+.chrono-watch-btn:active {
+  transform: scale(0.96);
+}
+
+.chrono-dial {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.chrono-ring-svg {
+  width: 24px;
+  height: 24px;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.chrono-ring-track {
+  fill: none;
+  stroke: var(--border-hairline);
+  stroke-width: 3.2;
+}
+
+.chrono-ring-progress {
+  fill: none;
+  stroke: var(--accent-champagne);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-dasharray: 94.25;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.08s linear;
+}
+
+.chrono-center-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
   background: var(--accent-champagne);
+  transition: transform 0.25s var(--ease-horology);
+}
+
+.inline-timer-box.is-running .chrono-center-dot {
+  transform: scale(1.25);
 }
 
 .timer-seconds {
-  font-size: 1rem;
+  font-size: 0.82rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--text-primary);
 }
 
-.btn-timer-action {
-  padding: 5px 12px;
-  border-radius: var(--radius-pill);
-  background: var(--accent-champagne);
-  color: #0a0a0c;
-  font-size: 0.78rem;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
+.inline-timer-box.is-running .timer-seconds {
+  color: var(--accent-champagne);
 }
 
 .btn-timer-reset {
-  background: transparent;
-  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-hairline);
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  line-height: 1;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 0;
+  transition: transform 0.25s var(--ease-horology),
+              color 0.2s var(--ease-horology),
+              border-color 0.2s var(--ease-horology),
+              background 0.2s var(--ease-horology);
+}
+
+.btn-timer-reset:hover {
+  color: var(--accent-champagne);
+  border-color: var(--border-gold);
+  background: var(--accent-champagne-soft);
+  transform: rotate(-45deg);
+}
+
+.btn-timer-reset:active {
+  transform: rotate(-90deg) scale(0.92);
 }
 
 /* Pie de la Carta */
@@ -1993,11 +2076,15 @@ button:focus-visible,
     white-space: nowrap;
   }
 
+  .card-header-right {
+    gap: 8px;
+    margin-left: auto;
+  }
+
   .category-tag {
     font-size: 0.66rem;
     letter-spacing: 0.1em;
     white-space: nowrap;
-    margin-left: auto;
   }
 
   .card-body {
@@ -2017,9 +2104,9 @@ button:focus-visible,
   }
 
   .inline-timer-box {
-    width: 100%;
-    justify-content: space-between;
-    padding: 8px 14px;
+    width: auto;
+    padding: 3px 6px 3px 4px;
+    gap: 5px;
   }
 
   .card-chat-action-container {
