@@ -66,8 +66,10 @@ export function formatCardPrompt(template, activeName, otherName) {
   const safeActive = sanitizeString(activeName, 32, 'Jugador 1');
   const safeOther = sanitizeString(otherName, 32, 'Jugador 2');
   return template
-    .replace(/\{active\}/g, safeActive)
-    .replace(/\{other\}/g, safeOther);
+    .replace(/\{active\}/gi, safeActive)
+    .replace(/\{other\}/gi, safeOther)
+    .replace(/\{player\}/gi, safeActive)
+    .replace(/\{[a-zA-Z0-9_]+\}/g, '');
 }
 
 /**

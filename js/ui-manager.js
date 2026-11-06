@@ -317,7 +317,9 @@ export class UIManager {
       }
 
       if (this.elements.cardPromptHint) {
-        this.elements.cardPromptHint.textContent = card.hint || '';
+        this.elements.cardPromptHint.textContent = card.hint
+          ? formatCardPrompt(card.hint, activePlayer.name, otherPlayer.name)
+          : '';
       }
 
       // Sync Facebook-style Chat Context & Partner Name
