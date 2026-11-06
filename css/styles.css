@@ -1809,16 +1809,15 @@ button:focus-visible,
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Barra Superior en Móvil */
+  /* Barra Superior en Móvil: Compacta, limpia y en una sola línea sin saltos */
   .frosted-nav {
-    padding-top: max(8px, env(safe-area-inset-top));
-    padding-bottom: 8px;
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-top: max(6px, env(safe-area-inset-top));
+    padding-bottom: 6px;
   }
 
   .nav-inner {
-    gap: 6px;
+    padding: 6px 12px;
+    gap: 8px;
   }
 
   .brand-name {
@@ -1826,15 +1825,16 @@ button:focus-visible,
   }
 
   .brand-emblem {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     font-size: 0.74rem;
     flex-shrink: 0;
   }
 
   .nav-controls {
-    gap: 5px;
+    gap: 6px;
     flex-wrap: nowrap;
+    min-width: 0;
   }
 
   .nav-custom-text,
@@ -1843,29 +1843,76 @@ button:focus-visible,
   }
 
   .players-pill {
-    padding: 6px 10px;
-    font-size: 0.78rem;
-    max-width: 175px;
-    gap: 5px;
+    padding: 6px 11px;
+    font-size: 0.74rem;
+    gap: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
-  .players-pill #nav-players-label {
-    display: none; /* Dejar solo la sala y el estado en pantallas estrechas */
+  .players-pill .pill-mode-tag {
+    white-space: nowrap;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
   }
 
+  .players-pill #nav-players-label,
   .pill-divider {
-    display: none;
+    display: none; /* Dejar solo la sala y el icono en pantallas estrechas */
   }
 
   .icon-btn {
     padding: 6px 10px;
-    font-size: 0.8rem;
-    min-height: 36px;
+    font-size: 0.76rem;
+    min-height: 34px;
+    white-space: nowrap;
   }
 
-  /* Escenario del Juego en Móvil */
+  /* Escenario del Juego y Onboarding en Móvil */
   .main-stage {
-    padding: 10px 12px 24px;
+    padding: 12px 12px 28px;
+    align-items: flex-start;
+  }
+
+  .onboarding-card {
+    padding: 26px 20px;
+    border-radius: 22px;
+  }
+
+  .onboarding-headline {
+    font-size: clamp(1.65rem, 6.5vw, 2.1rem);
+  }
+
+  .onboarding-subtitle {
+    font-size: 0.86rem;
+    margin-bottom: 20px;
+  }
+
+  .setup-mode-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .setup-mode-box {
+    padding: 13px 14px;
+  }
+
+  .input-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .setup-level-grid {
+    gap: 8px;
+  }
+
+  .setup-level-box {
+    padding: 11px 6px;
+  }
+
+  .setup-level-name {
+    font-size: 0.7rem;
+    line-height: 1.25;
   }
 
   .game-screen {
@@ -1873,44 +1920,95 @@ button:focus-visible,
     gap: 12px;
   }
 
+  /* Selector de Niveles (Ancho Completo) + Medidor de Química Apilado Armónico */
   .game-top-bar {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
   }
 
   .level-selector {
-    flex: 1;
-    min-width: 0;
-    padding: 3px;
-    gap: 2px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 4px;
+    gap: 4px;
   }
 
   .level-tab {
-    padding: 6px 6px;
-    font-size: 0.72rem;
-    flex: 1;
+    padding: 8px 6px;
+    font-size: 0.74rem;
+    justify-content: center;
     text-align: center;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    gap: 4px;
+  }
+
+  .level-tab .roman-num {
+    font-size: 0.85rem;
   }
 
   .chemistry-pill {
-    padding: 6px 10px;
+    width: 100%;
+    justify-content: space-between;
+    padding: 7px 14px;
     font-size: 0.75rem;
-    flex-shrink: 0;
   }
 
+  .chemistry-mini-track {
+    flex: 1;
+    max-width: 180px;
+    margin: 0 8px;
+  }
+
+  /* La Carta Protagonista en Móvil */
   .playing-card {
-    padding: 22px 18px 20px;
+    padding: 20px 18px 18px;
     min-height: auto;
-    border-radius: 20px;
+    border-radius: 22px;
+  }
+
+  .card-meta-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-bottom: 14px;
+  }
+
+  .turn-indicator {
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .turn-badge {
+    padding: 4px 11px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  .turn-target {
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .category-tag {
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    margin-left: auto;
+  }
+
+  .card-body {
+    margin: 20px 0 16px;
+    gap: 14px;
   }
 
   .card-prompt-text {
-    font-size: clamp(1.22rem, 5.2vw, 1.55rem);
-    line-height: 1.36;
-    margin: 16px 0 10px;
+    font-size: clamp(1.28rem, 5.4vw, 1.6rem);
+    line-height: 1.34;
+    margin: 0;
   }
 
   .card-prompt-hint {
@@ -1918,47 +2016,57 @@ button:focus-visible,
     line-height: 1.4;
   }
 
+  .inline-timer-box {
+    width: 100%;
+    justify-content: space-between;
+    padding: 8px 14px;
+  }
+
   .card-chat-action-container {
-    margin-top: 18px;
-    margin-bottom: 4px;
+    margin-top: 8px;
+    margin-bottom: 2px;
   }
 
   .btn-card-open-chat {
     width: 100%;
-    min-height: 48px;
-    padding: 12px 18px;
-    font-size: 0.95rem;
+    min-height: 46px;
+    padding: 11px 18px;
+    font-size: 0.9rem;
     border-radius: 9999px;
   }
 
+  /* Pie de la Carta: Botón Principal Arriba/Abajo + Secundarios 50/50 */
   .card-footer {
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column-reverse;
+    align-items: stretch;
     gap: 10px;
-    margin-top: 12px;
-  }
-
-  .footer-secondary-actions {
-    flex: 1;
-    display: flex;
-  }
-
-  .footer-secondary-actions #open-custom-modal-btn,
-  .footer-secondary-actions .btn-ghost {
-    width: 100%;
-    min-height: 48px;
-    border-radius: 9999px;
-    font-size: 0.88rem;
-    justify-content: center;
-    white-space: nowrap;
+    padding-top: 16px;
+    margin-top: 8px;
   }
 
   .btn-flagship#complete-turn-btn {
-    flex: 2;
+    width: 100%;
     min-height: 48px;
     border-radius: 9999px;
-    font-size: 0.95rem;
+    font-size: 0.94rem;
     justify-content: center;
+  }
+
+  .footer-secondary-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .footer-secondary-actions .btn-ghost {
+    width: 100%;
+    min-height: 42px;
+    padding: 8px 10px;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    justify-content: center;
+    white-space: nowrap;
   }
 
   /* Modal de Chat tipo Bottom Sheet Nativo en Móvil */
@@ -2106,7 +2214,7 @@ button:focus-visible,
 
   @media (max-width: 640px) {
     #active-rooms-count-label {
-      max-width: 90px;
+      max-width: 115px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;

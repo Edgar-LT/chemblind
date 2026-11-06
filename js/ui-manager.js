@@ -239,7 +239,7 @@ export class UIManager {
     }
 
     // Mantener visible el botón de salas disponibles si hay salas para cambiar
-    if (this.elements.viewRoomsBtn && this.elements.activeRoomsCountLabel?.textContent?.includes('disponible')) {
+    if (this.elements.viewRoomsBtn && this.elements.activeRoomsCountLabel?.textContent?.includes('sala')) {
       this.elements.viewRoomsBtn.classList.remove('is-hidden');
     }
 
@@ -666,11 +666,11 @@ export class UIManager {
   updateActiveRoomsCount(count, isRoomSelected) {
     if (this.elements.activeRoomsCountLabel) {
       if (count <= 0) {
-        this.elements.activeRoomsCountLabel.textContent = 'Salas disponibles';
+        this.elements.activeRoomsCountLabel.textContent = 'Salas';
       } else if (count === 1) {
-        this.elements.activeRoomsCountLabel.textContent = '1 sala disponible';
+        this.elements.activeRoomsCountLabel.textContent = '1 sala activa';
       } else {
-        this.elements.activeRoomsCountLabel.textContent = `${count} salas disponibles`;
+        this.elements.activeRoomsCountLabel.textContent = `${count} salas activas`;
       }
     }
 
