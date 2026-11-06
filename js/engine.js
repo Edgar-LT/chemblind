@@ -13,7 +13,11 @@ import {
   CATEGORY_LABELS,
   INITIAL_WILDCARDS,
   CHEMISTRY_MAX,
-  CHEMISTRY_MIN
+  CHEMISTRY_MIN,
+  INITIAL_CHEMISTRY_SCORE,
+  MIN_CUSTOM_CARD_LENGTH,
+  MAX_CUSTOM_TIMER_SEC,
+  DEFAULT_CARD_CHEMISTRY_DELTA
 } from './constants.js';
 
 import { DEFAULT_CARDS } from './data/cards.js';
@@ -29,6 +33,10 @@ export {
   INITIAL_WILDCARDS,
   CHEMISTRY_MAX,
   CHEMISTRY_MIN,
+  INITIAL_CHEMISTRY_SCORE,
+  MIN_CUSTOM_CARD_LENGTH,
+  MAX_CUSTOM_TIMER_SEC,
+  DEFAULT_CARD_CHEMISTRY_DELTA,
   DEFAULT_CARDS
 };
 
@@ -84,8 +92,8 @@ export function createCustomCard({
   hint = ''
 }) {
   const cleanText = sanitizeString(text, 220, '');
-  if (cleanText.length < 8) {
-    throw new Error('La pregunta o reto debe tener al menos 8 caracteres.');
+  if (cleanText.length < MIN_CUSTOM_CARD_LENGTH) {
+    throw new Error(`La pregunta o reto debe tener al menos ${MIN_CUSTOM_CARD_LENGTH} caracteres.`);
   }
 
   const validLevels = Object.values(INTENSITY_LEVELS);
@@ -105,7 +113,7 @@ export function createCustomCard({
       ? [GAME_MODES.ONLINE]
       : [GAME_MODES.PRESENCIAL, GAME_MODES.ONLINE];
 
-  const safeTimer = clampNumber(Number(timerSeconds) || 0, 0, 180);
+  const safeTimer = clampNumber(Number(timerSeconds) || 0, 0, MAX_CUSTOM_TIMER_SEC);
   const defaultHint =
     safeTimer > 0
       ? 'Carta personalizada con reto de tiempo.'
@@ -119,7 +127,7 @@ export function createCustomCard({
     text: cleanText,
     hint: sanitizeString(hint, 140, defaultHint),
     timerSeconds: safeTimer,
-    chemistryDelta: safeLevel === 3 ? 13 : safeLevel === 2 ? 10 : 7,
+    chemistryDelta: safeLevel === 3 ? 13 : safeLevel === 2 ? 10 : DEFAULT_CARD_CHEMISTRY_DELTA,
     isCustom: true
   });
 }
@@ -130,9 +138,10 @@ export function createCustomCard({
  * @param {string} gameMode
  * @param {number} level
  * @param {Array<Object>} [customCards]
+ * @param {number} [randomSeed]
  * @returns {Object}
  */
-export function pickInitialCard(gameMode, level, customCards = []) {
+export function pickInitialCard(gameMode, level, customCards = [], randomSeed = Math.random()) {
   const allCards = [...customCards, ...DEFAULT_CARDS];
   const candidates = allCards.filter((card) => {
     const matchesLevel = card.level === Number(level);
@@ -144,7 +153,8 @@ export function pickInitialCard(gameMode, level, customCards = []) {
   });
 
   const list = candidates.length > 0 ? candidates : DEFAULT_CARDS;
-  const pickedIndex = Math.floor(Math.random() * list.length);
+  const safeSeed = clampNumber(randomSeed, 0, 0.999999);
+  const pickedIndex = Math.floor(safeSeed * list.length);
   return list[pickedIndex] || DEFAULT_CARDS[0];
 }
 
@@ -178,7 +188,7 @@ export function createInitialGameState(options = {}) {
     activePlayerIndex: 0,
     gameMode,
     currentLevel: initialLevel,
-    chemistryScore: 15,
+    chemistryScore: INITIAL_CHEMISTRY_SCORE,
     turnCount: 1,
     completedCardIds: [],
     customCards,
@@ -254,7 +264,7 @@ export function completeCurrentTurn(state, options = {}) {
   }
 
   const bonus = Number(options.bonusChemistry) || 0;
-  const delta = (state.currentCard.chemistryDelta || 7) + bonus;
+  const delta = (state.currentCard.chemistryDelta || DEFAULT_CARD_CHEMISTRY_DELTA) + bonus;
   const nextChemistry = clampNumber(
     state.chemistryScore + delta,
     CHEMISTRY_MIN,

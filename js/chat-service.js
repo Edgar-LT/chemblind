@@ -4,19 +4,22 @@
  * Fully decoupled from game logic, maintaining strict Clean Architecture (SOLID).
  */
 
-const SUPABASE_URL = 'https://vdwdqniekhxisewuffnc.supabase.co';
-const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkd2Rxbmlla2h4aXNld3VmZm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4MTk5ODcsImV4cCI6MjEwOTM5NTk4N30.lU3QIqEXK6rKsNTlzZN0VWlYtmStpHItpdtxJl9MLEY';
+import { getSupabase, fetchRoomData, saveRoomMessage } from './supabase-client.js';
+
+const POLL_INTERVAL_WS_ACTIVE_MS = 4500;
+const POLL_INTERVAL_FALLBACK_MS = 1800;
 
 export class ChatRoomAPI {
   constructor() {
     this.roomCode = null;
+    this.accessToken = null;
     this.senderId = null;
     this.authorName = null;
     this.authorRole = null;
     this.seenMessageIds = new Set();
     this.pollInterval = null;
     this.realtimeChannel = null;
+    this.isSocketHealthy = false;
     this.onMessageCallback = null;
     this.onStateSyncCallback = null;
     this.isPolling = false;
@@ -29,6 +32,7 @@ export class ChatRoomAPI {
    * Connects to a room chat with active server heartbeat polling and WebSocket broadcast.
    * @param {Object} params
    * @param {string} params.roomCode
+   * @param {string} [params.accessToken]
    * @param {string} params.senderId
    * @param {string} params.authorName
    * @param {string} params.authorRole
@@ -36,10 +40,11 @@ export class ChatRoomAPI {
    * @param {Function} [params.onInitialHistory] - Called with full history array on first load
    * @param {Function} [params.onStateSync] - Called when server room card/turn/level changes
    */
-  async connect({ roomCode, senderId, authorName, authorRole, onMessage, onInitialHistory, onStateSync }) {
+  async connect({ roomCode, accessToken = null, senderId, authorName, authorRole, onMessage, onInitialHistory, onStateSync }) {
     this.disconnect();
 
     this.roomCode = String(roomCode || '').trim().toUpperCase();
+    this.accessToken = accessToken || null;
     this.senderId = senderId;
     this.authorName = authorName;
     this.authorRole = authorRole;
@@ -73,24 +78,43 @@ export class ChatRoomAPI {
       console.warn('[ChatAPI] Error al cargar estado o historial inicial:', e);
     }
 
-    // 2. Start continuous active server polling (every 1.5 seconds)
-    // Constantly checks if messages or active card changed on server
-    this.pollInterval = setInterval(() => {
-      this.pollNewMessages();
-    }, 1500);
-
-    // 3. Subscribe to Realtime WebSocket channel for instant sub-second delivery
+    // 2. Subscribe to Realtime WebSocket channel for instant sub-second delivery
     this.initRealtimeSocket();
+
+    // 3. Start adaptive server polling (pauses automatically when tab is hidden)
+    this._restartPollingTimer();
+  }
+
+  _restartPollingTimer() {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+    const intervalMs = this.isSocketHealthy ? POLL_INTERVAL_WS_ACTIVE_MS : POLL_INTERVAL_FALLBACK_MS;
+    this.pollInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      this.pollNewMessages();
+    }, intervalMs);
   }
 
   /**
-   * Initializes Supabase Realtime channel for zero-latency peer broadcast.
+   * Initializes Supabase Realtime channel reusing the singleton client (zero connection leaks).
    */
   initRealtimeSocket() {
-    if (typeof window === 'undefined' || !window.supabase || !this.roomCode) return;
+    const client = getSupabase();
+    if (!client || !this.roomCode) return;
+
     try {
-      const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       const channelName = `chemblind_chat:${this.roomCode}`;
+
+      // Remove any stale channel with the same topic before subscribing
+      const existing = typeof client.getChannels === 'function' ? client.getChannels() : [];
+      const stale = existing.find((ch) => ch.topic === `realtime:${channelName}` || ch.topic === channelName);
+      if (stale) {
+        client.removeChannel(stale).catch((err) => {
+          console.warn('[ChatAPI] Advertencia limpiando canal previo:', err);
+        });
+      }
 
       this.realtimeChannel = client.channel(channelName, {
         config: { broadcast: { ack: false, self: false } }
@@ -101,7 +125,13 @@ export class ChatRoomAPI {
           const msg = payload.payload || payload;
           this.processIncomingMessage(msg);
         })
-        .subscribe();
+        .subscribe((status) => {
+          const healthy = status === 'SUBSCRIBED';
+          if (healthy !== this.isSocketHealthy) {
+            this.isSocketHealthy = healthy;
+            this._restartPollingTimer();
+          }
+        });
     } catch (e) {
       console.warn('[ChatAPI] Realtime WebSocket no disponible, operando en modo sondeo continuo:', e);
     }
@@ -139,43 +169,32 @@ export class ChatRoomAPI {
           this.processIncomingMessage(msg);
         });
       }
-    } catch (e) {
-      // Network hiccup: silent retry on next tick
+    } catch (err) {
+      console.debug('[ChatAPI] Reintento silencioso de sondeo tras interrupción temporal:', err?.message || err);
     } finally {
       this.isPolling = false;
     }
   }
 
   /**
-   * Fetches room snapshot (current_card_id, active_turn, chemistry_score, level, chat_history) via fast REST query.
+   * Fetches room snapshot (current_card_id, active_turn, chemistry_score, level, chat_history) via hardened RPC.
    * @returns {Promise<Object|null>}
    */
   async fetchRoomSnapshot() {
     if (!this.roomCode) return null;
     try {
-      const url = `${SUPABASE_URL}/rest/v1/rooms?select=current_card_id,active_turn,chemistry_score,level,chat_history&code=eq.${encodeURIComponent(this.roomCode)}`;
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!res.ok) return null;
-      const rows = await res.json();
-      const row = rows[0];
+      const row = await fetchRoomData(this.roomCode, this.accessToken);
       if (!row) return null;
 
       return {
-        chat_history: row.chat_history || [],
+        chat_history: Array.isArray(row.chat_history) ? row.chat_history : [],
         current_card_id: row.current_card_id || null,
         active_turn: row.active_turn,
         chemistry_score: row.chemistry_score,
         level: row.level
       };
-    } catch (e) {
+    } catch (err) {
+      console.warn('[ChatAPI] Error consultando snapshot de sala:', err);
       return null;
     }
   }
@@ -244,33 +263,19 @@ export class ChatRoomAPI {
         type: 'broadcast',
         event: 'CHAT_MSG',
         payload: messageObj
-      }).catch(() => {});
+      }).catch((err) => {
+        console.warn('[ChatAPI] Advertencia en broadcast WS, persistiendo vía RPC:', err);
+      });
     }
 
-    // 2. Persist atomically in PostgreSQL via RPC
-    try {
-      const url = `${SUPABASE_URL}/rest/v1/rpc/append_room_message`;
-      await fetch(url, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          p_code: this.roomCode,
-          p_message: messageObj
-        })
-      });
-    } catch (e) {
-      console.warn('[ChatAPI] Error al persistir mensaje en servidor:', e);
-    }
+    // 2. Persist atomically in PostgreSQL via hardened RPC
+    await saveRoomMessage(this.roomCode, messageObj);
 
     return messageObj;
   }
 
   /**
-   * Disconnects polling and channel listeners cleanly.
+   * Disconnects polling and channel listeners cleanly without leaking WebSocket instances.
    */
   disconnect() {
     if (this.pollInterval) {
@@ -278,12 +283,23 @@ export class ChatRoomAPI {
       this.pollInterval = null;
     }
     if (this.realtimeChannel) {
-      try {
-        this.realtimeChannel.unsubscribe();
-      } catch (e) {}
+      const client = getSupabase();
+      if (client && typeof client.removeChannel === 'function') {
+        client.removeChannel(this.realtimeChannel).catch((err) => {
+          console.warn('[ChatAPI] Advertencia al remover canal Realtime:', err);
+        });
+      } else {
+        try {
+          this.realtimeChannel.unsubscribe();
+        } catch (err) {
+          console.warn('[ChatAPI] Advertencia al desuscribir canal Realtime:', err);
+        }
+      }
       this.realtimeChannel = null;
     }
+    this.isSocketHealthy = false;
     this.roomCode = null;
+    this.accessToken = null;
     this.onMessageCallback = null;
     this.onStateSyncCallback = null;
     this.seenMessageIds.clear();

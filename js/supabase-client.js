@@ -193,27 +193,27 @@ export async function joinGameRoom({ code, accessToken, playerName }) {
 }
 
 /**
- * Fetches the current room state by code and access token.
+ * Fetches the current room state by code and access token via hardened RPC.
+ * Never exposes host_token unless the caller device is the room creator.
  * @param {string} code
- * @param {string} accessToken
+ * @param {string} [accessToken]
  * @returns {Promise<Object|null>}
  */
-export async function fetchRoomData(code, accessToken) {
+export async function fetchRoomData(code, accessToken = null) {
   const supabase = getSupabase();
-  if (!supabase) return null;
+  if (!supabase || !code) return null;
 
   try {
-    const { data, error } = await supabase
-      .from('rooms')
-      .select('*')
-      .eq('code', code)
-      .eq('access_token', accessToken)
-      .gt('expires_at', new Date().toISOString())
-      .maybeSingle();
+    const { data, error } = await supabase.rpc('get_room_by_token', {
+      p_code: code,
+      p_access_token: accessToken,
+      p_client_id: getDeviceId()
+    });
 
     if (error || !data) return null;
     return data;
   } catch (err) {
+    console.warn('[ChemBlind/Supabase] Error consultando sala:', err);
     return null;
   }
 }
@@ -378,37 +378,52 @@ export async function saveRoomMessage(roomCode, messageObj) {
 }
 
 const updateDebounceTimers = new Map();
+const pendingRoomFields = new Map();
+const DEBOUNCE_SYNC_MS = 250;
 
 /**
- * Updates room row in Supabase with host verification.
- * Debounced to protect Postgres from write amplification during rapid interactions.
- * @param {string} roomId
+ * Updates room state in Supabase via hardened `sync_room_state` RPC.
+ * Debounced to protect Postgres from write amplification and race conditions during rapid interactions.
+ * @param {string} roomCodeOrId - Room code (preferred) or room identifier
  * @param {Object} fields
- * @param {string} [hostToken]
+ * @param {string} [accessToken]
  */
-export function updateRoomRecord(roomId, fields, hostToken = null) {
+export function updateRoomRecord(roomCodeOrId, fields, accessToken = null) {
   const supabase = getSupabase();
-  if (!supabase || !roomId) return;
+  if (!supabase || !roomCodeOrId || !fields) return;
 
-  (async () => {
+  const merged = { ...(pendingRoomFields.get(roomCodeOrId) || {}), ...fields };
+  pendingRoomFields.set(roomCodeOrId, merged);
+
+  if (updateDebounceTimers.has(roomCodeOrId)) {
+    clearTimeout(updateDebounceTimers.get(roomCodeOrId));
+  }
+
+  const timerId = setTimeout(async () => {
+    updateDebounceTimers.delete(roomCodeOrId);
+    const payload = pendingRoomFields.get(roomCodeOrId);
+    pendingRoomFields.delete(roomCodeOrId);
+    if (!payload) return;
+
     try {
-      let query = supabase
-        .from('rooms')
-        .update({ ...fields, updated_at: new Date().toISOString() })
-        .eq('id', roomId);
+      const { error } = await supabase.rpc('sync_room_state', {
+        p_code: roomCodeOrId,
+        p_access_token: accessToken,
+        p_active_turn: typeof payload.active_turn === 'number' ? payload.active_turn : null,
+        p_chemistry_score: typeof payload.chemistry_score === 'number' ? payload.chemistry_score : null,
+        p_current_card_id: payload.current_card_id || null,
+        p_level: typeof payload.level === 'number' ? payload.level : null
+      });
 
-      if (hostToken) {
-        query = query.eq('host_token', hostToken);
-      }
-
-      const { error } = await query;
       if (error) {
-        console.warn('[ChemBlind/Supabase] Advertencia al actualizar sala:', error.message);
+        console.warn('[ChemBlind/Supabase] Advertencia al sincronizar sala:', error.message);
       }
     } catch (err) {
       console.warn('[ChemBlind/Supabase] Error en updateRoomRecord:', err);
     }
-  })();
+  }, DEBOUNCE_SYNC_MS);
+
+  updateDebounceTimers.set(roomCodeOrId, timerId);
 }
 
 /**

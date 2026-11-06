@@ -88,8 +88,51 @@ def test_cards_dataset_integrity():
     print(f"  Tarjetas con interpolación de turnos: {placeholders_found}")
     assert placeholders_found > 0, "Debe haber tarjetas con interpolación de jugadores"
 
-    print("\n[OK] Todas las pruebas de integridad de mazo y Clean Architecture pasaron exitosamente.")
+
+def test_js_contracts_and_zero_silent_catches():
+    """Verifica que no existan llamadas a métodos inexistentes ni bloques catch vacíos en la capa JS."""
+    js_dir = Path(__file__).parent.parent / "js"
+    app_content = (js_dir / "app.js").read_text(encoding="utf-8")
+    ui_content = (js_dir / "ui-manager.js").read_text(encoding="utf-8")
+    chat_content = (js_dir / "chat-service.js").read_text(encoding="utf-8")
+    supa_content = (js_dir / "supabase-client.js").read_text(encoding="utf-8")
+
+    print("--- 5. Verificando contratos de métodos entre Controlador y UI ---")
+    assert "syncChatHistory(" not in app_content, "Llamada huérfana a syncChatHistory detectada en app.js"
+    assert "handleIncomingMessage(" not in app_content, "Llamada huérfana a handleIncomingMessage detectada en app.js"
+    assert "renderChemistry(score)" in ui_content, "Falta definición de renderChemistry en UIManager"
+
+    print("--- 6. Verificando reutilización de Singleton Supabase y ausencia de fugas WS ---")
+    assert "window.supabase.createClient" not in chat_content, (
+        "chat-service.js no debe instanciar clientes Supabase duplicados; debe usar getSupabase()"
+    )
+    assert "getSupabase" in chat_content, "chat-service.js debe importar y usar el singleton getSupabase()"
+    assert "sync_room_state" in supa_content, "supabase-client.js debe sincronizar mediante el RPC blindado sync_room_state"
+    assert "get_room_by_token" in supa_content, "supabase-client.js debe consultar mediante el RPC blindado get_room_by_token"
+
+    print("--- 7. Verificando regla de Cero Errores Silenciados (catch vacíos) ---")
+    empty_catch_pattern = re.compile(r"catch\s*(?:\([^)]*\))?\s*\{\s*\}")
+    for js_file in js_dir.glob("*.js"):
+        src = js_file.read_text(encoding="utf-8")
+        assert not empty_catch_pattern.search(src), f"Bloque catch vacío prohibido en {js_file.name}"
+
+    print("--- 8. Verificando integridad de IDs entre UIManager e index.html ---")
+    html_content = (Path(__file__).parent.parent / "index.html").read_text(encoding="utf-8")
+    html_ids = set(re.findall(r'id=["\']([^"\']+)["\']', html_content))
+    ui_cached_ids = set(re.findall(r"byId\(['\"]([^'\"]+)['\"]\)", ui_content))
+    missing_in_html = ui_cached_ids - html_ids
+    assert not missing_in_html, f"IDs referenciados en UIManager que no existen en index.html: {missing_in_html}"
+    assert "wildcard-skip-btn" in html_ids, "El botón de comodines debe existir en index.html"
+    assert ".innerHTML" not in ui_content, "UIManager no debe asignar innerHTML directamente"
+
+    print("--- 9. Verificando accesibilidad WCAG 2.1 AA (Viewport escalable, Escape y Focus Visible) ---")
+    assert "user-scalable=no" not in html_content, "index.html no debe bloquear el zoom del usuario (WCAG 1.4.4)"
+    assert "aria-selected" in html_content and "aria-selected" in ui_content, "Las pestañas deben gestionar aria-selected"
+    assert "closeTopModal" in ui_content and "Escape" in app_content, "Los modales deben cerrarse con la tecla Escape"
+
+    print("\n[OK] Todas las pruebas de integridad de mazo, seguridad RPC, contratos DOM y accesibilidad pasaron exitosamente.")
 
 
 if __name__ == "__main__":
     test_cards_dataset_integrity()
+    test_js_contracts_and_zero_silent_catches()

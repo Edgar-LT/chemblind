@@ -2,18 +2,18 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>ChemBlind Chat — Conversación en Vivo</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap"
     rel="stylesheet"
   />
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="./css/styles.css?v=2.3.6" />
+  <link rel="stylesheet" href="./css/styles.css?v=2.4.4" />
 
   <style>
     body {
@@ -244,11 +244,13 @@
 
   <script type="module">
     import { ChatRoomAPI } from './js/chat-service.js?v=2.4.4';
+    import { getSessionClientId } from './js/supabase-client.js?v=2.4.4';
 
     const params = new URLSearchParams(window.location.search);
     const roomCode = params.get('room') || prompt('Ingresa el código de la sala (Ej: CB-XXXX):') || '';
+    const accessToken = params.get('key') || null;
     const myName = params.get('name') || prompt('Ingresa tu nombre:') || 'Jugador';
-    const senderId = 'sess_' + Math.random().toString(36).slice(2, 9);
+    const senderId = getSessionClientId();
 
     const roomBadge = document.getElementById('chat-room-badge');
     const partnerTitle = document.getElementById('chat-partner-title');
@@ -309,6 +311,7 @@
     if (roomCode) {
       chatAPI.connect({
         roomCode,
+        accessToken,
         senderId,
         authorName: myName,
         authorRole: 'player',

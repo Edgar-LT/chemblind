@@ -67,3 +67,7 @@ export const CATEGORY_LABELS = Object.freeze({
 export const INITIAL_WILDCARDS = 2;
 export const CHEMISTRY_MAX = 100;
 export const CHEMISTRY_MIN = 0;
+export const INITIAL_CHEMISTRY_SCORE = 15;
+export const MIN_CUSTOM_CARD_LENGTH = 8;
+export const MAX_CUSTOM_TIMER_SEC = 180;
+export const DEFAULT_CARD_CHEMISTRY_DELTA = 7;

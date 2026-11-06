@@ -223,8 +223,6 @@ class ChemBlindAppController {
         if (targetLevel === this.state.currentLevel) return;
 
         this.chrono.stop();
-        this.ui.resetResponseSection();
-        this.clearDraftResponse();
         this.state = setIntensityLevel(this.state, targetLevel);
         this.persistLocalSession();
         this.syncRoomState('LEVEL_CHANGED');
@@ -239,8 +237,6 @@ class ChemBlindAppController {
     el.completeTurnBtn?.addEventListener('click', () => {
       if (!this.state) return;
       this.chrono.stop();
-      this.ui.resetResponseSection();
-      this.clearDraftResponse();
       this.state = completeCurrentTurn(this.state);
       this.persistLocalSession();
       this.syncRoomState('NEXT_CARD');
@@ -259,8 +255,6 @@ class ChemBlindAppController {
         return;
       }
       this.chrono.stop();
-      this.ui.resetResponseSection();
-      this.clearDraftResponse();
       this.state = result.state;
       this.persistLocalSession();
       this.syncRoomState('WILDCARD_SKIP');
@@ -271,29 +265,8 @@ class ChemBlindAppController {
       this.ui.showToast('Carta saltada con comodín');
     });
 
-    // Card Response: Live Character Counter and Draft Autosave
-    el.cardResponseInput?.addEventListener('input', (e) => {
-      this.ui.updateResponseCharCount(e.target.value.length);
-      this.saveDraftResponse(e.target.value);
-    });
-
-    // Card Response: Send Response
-    el.sendResponseBtn?.addEventListener('click', () => {
-      this.handleSendResponse();
-    });
-
-    // Card Response: Edit Sent Response
-    el.editResponseBtn?.addEventListener('click', () => {
-      const currentText = this.ui.elements.responseDisplayText?.textContent || '';
-      this.ui.showResponseInput(currentText);
-    });
-
-    // Conversation Chat Modal Controls (All 4 triggers: card, display quote, nav, and floating)
+    // Conversation Chat Modal Controls
     el.cardOpenChatBtn?.addEventListener('click', () => {
-      this.ui.setChatModalOpen(true);
-    });
-
-    el.openChatModalBtn?.addEventListener('click', () => {
       this.ui.setChatModalOpen(true);
     });
 
@@ -349,6 +322,13 @@ class ChemBlindAppController {
     el.customCardForm?.addEventListener('submit', (e) => {
       e.preventDefault();
       this.handleCreateCustomCard();
+    });
+
+    // Accessibility: Close active modal on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.ui.closeTopModal();
+      }
     });
   }
 
@@ -501,8 +481,6 @@ class ChemBlindAppController {
   }
 
   hydrateAndStartGame(roomData, guestName) {
-    this.ui.resetResponseSection();
-
     // Check if we have an active session snapshot in sessionStorage for this tab
     const localSnapshot = this.restoreLocalSessionSnapshot(roomData.code);
 
@@ -548,11 +526,8 @@ class ChemBlindAppController {
 
     // Hydrate persistent chat history from PostgreSQL
     if (Array.isArray(roomData.chat_history) && roomData.chat_history.length > 0) {
-      this.syncChatHistory(roomData.chat_history);
+      this.hydrateInitialChat(roomData.chat_history);
     }
-
-    // Restore unsubmitted draft if the user was typing before refreshing
-    this.restoreDraftResponse();
   }
 
   async handleOnboardingSubmit() {
@@ -592,10 +567,10 @@ class ChemBlindAppController {
       }
 
       // Pre-set initial card in PostgreSQL so guest instantly loads the exact same card
-      if (roomResult.roomId) {
-        updateRoomRecord(roomResult.roomId, {
+      if (roomResult.code) {
+        updateRoomRecord(roomResult.code, {
           current_card_id: startingCard.id
-        }, roomResult.hostToken);
+        }, roomResult.accessToken);
       }
 
       const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${roomResult.code}&key=${roomResult.accessToken}`;
@@ -712,10 +687,11 @@ class ChemBlindAppController {
   connectToRealtimeRoom(roomCode) {
     if (!this.roomSession) return;
 
-    // Connect Decoupled Standalone Chat API with active 1.5s server polling + WebSockets
+    // Connect Decoupled Standalone Chat API with adaptive server polling + WebSockets
     const myChatName = this.roomSession.role === 'player_one' ? this.roomSession.p1Name : this.roomSession.p2Name;
     this.chatAPI.connect({
       roomCode,
+      accessToken: this.roomSession.accessToken || null,
       senderId: getSessionClientId(),
       authorName: myChatName,
       authorRole: this.roomSession.role,
@@ -783,7 +759,7 @@ class ChemBlindAppController {
         this.handleRemoteCardAction(payload);
       },
       onCardResponse: (payload) => {
-        this.handleIncomingMessage(payload);
+        this.handleIncomingChatMessage(payload);
       },
       onStateUpdate: (newRecord) => {
         // Lifecycle fallback: detect player 2 initial join if broadcast missed
@@ -811,7 +787,7 @@ class ChemBlindAppController {
 
         // Guaranteed delivery fallback: sync persistent messages from PostgreSQL
         if (Array.isArray(newRecord.chat_history) && newRecord.chat_history.length > 0) {
-          this.syncChatHistory(newRecord.chat_history);
+          this.hydrateInitialChat(newRecord.chat_history);
         }
       }
     });
@@ -834,10 +810,6 @@ class ChemBlindAppController {
         isCardResponse: Boolean(msg.isCardResponse),
         cardPrompt: msg.cardPrompt || ''
       });
-
-      if (!isOutgoing && msg.isCardResponse && (!msg.cardId || msg.cardId === this.state?.currentCard?.id)) {
-        this.ui.showResponseDisplay(msg.authorName || 'Tu Cita', msg.text, false);
-      }
     });
   }
 
@@ -911,14 +883,18 @@ class ChemBlindAppController {
       broadcastRoomEvent(this.roomSession.channel, 'CARD_ACTION', payload);
     }
 
-    // 2. Direct checkpoint to PostgreSQL for guaranteed delivery
-    if (this.roomSession.roomId) {
-      updateRoomRecord(this.roomSession.roomId, {
-        active_turn: this.state.activePlayerIndex + 1,
-        chemistry_score: this.state.chemistryScore,
-        current_card_id: this.state.currentCard?.id,
-        level: this.state.currentLevel
-      });
+    // 2. Direct checkpoint to PostgreSQL via hardened RPC for guaranteed delivery
+    if (this.roomSession.code) {
+      updateRoomRecord(
+        this.roomSession.code,
+        {
+          active_turn: this.state.activePlayerIndex + 1,
+          chemistry_score: this.state.chemistryScore,
+          current_card_id: this.state.currentCard?.id,
+          level: this.state.currentLevel
+        },
+        this.roomSession.accessToken
+      );
     }
   }
 
@@ -938,7 +914,7 @@ class ChemBlindAppController {
       };
       sessionStorage.setItem(`chemblind_session_${this.roomSession.code}`, JSON.stringify(snapshot));
     } catch (e) {
-      // Storage unavailable or disabled
+      console.warn('[ChemBlind] sessionStorage no disponible al guardar snapshot:', e);
     }
   }
 
@@ -954,46 +930,9 @@ class ChemBlindAppController {
       if (!raw) return null;
       return JSON.parse(raw);
     } catch (e) {
+      console.warn('[ChemBlind] Error restaurando snapshot local:', e);
       return null;
     }
-  }
-
-  /**
-   * Autosaves unsubmitted response draft text in sessionStorage.
-   * @param {string} text
-   */
-  saveDraftResponse(text) {
-    if (!this.roomSession?.code) return;
-    try {
-      if (text) {
-        sessionStorage.setItem(`chemblind_draft_${this.roomSession.code}`, text);
-      } else {
-        sessionStorage.removeItem(`chemblind_draft_${this.roomSession.code}`);
-      }
-    } catch (e) {}
-  }
-
-  /**
-   * Restores unsubmitted draft text into the card textarea upon page reload.
-   */
-  restoreDraftResponse() {
-    if (!this.roomSession?.code) return;
-    try {
-      const draft = sessionStorage.getItem(`chemblind_draft_${this.roomSession.code}`);
-      if (draft && this.ui.elements.cardResponseInput) {
-        this.ui.showResponseInput(draft);
-      }
-    } catch (e) {}
-  }
-
-  /**
-   * Clears unsubmitted draft after response has been submitted or card changed.
-   */
-  clearDraftResponse() {
-    if (!this.roomSession?.code) return;
-    try {
-      sessionStorage.removeItem(`chemblind_draft_${this.roomSession.code}`);
-    } catch (e) {}
   }
 
   handleRemoteCardAction(payload) {
@@ -1035,83 +974,10 @@ class ChemBlindAppController {
     }
 
     // New card arrived from partner: animate and advance
-    this.ui.resetResponseSection();
-    this.clearDraftResponse();
-
     this.ui.animateCardTransition(() => {
       this.syncTimerWithCurrentCard();
       this.ui.renderGameStage(this.state, this.roomSession);
     });
-  }
-
-  /**
-   * Handles in-app submission of a card response.
-   */
-  async handleSendResponse() {
-    if (!this.state || !this.state.currentCard) return;
-
-    const inputEl = this.ui.elements.cardResponseInput;
-    const text = inputEl ? inputEl.value.trim() : '';
-
-    if (!text) {
-      this.ui.showToast('Escribe tu respuesta antes de enviar');
-      inputEl?.focus();
-      return;
-    }
-
-    let authorName = 'Tú';
-    if (this.roomSession) {
-      authorName = this.roomSession.role === 'player_one'
-        ? (this.roomSession.p1Name || 'Anfitrión')
-        : (this.roomSession.p2Name || 'Invitado');
-    }
-
-    // 1. Display locally on the card with edit permission
-    this.ui.showResponseDisplay(authorName, text, true);
-    this.clearDraftResponse();
-    this.persistLocalSession();
-
-    // 2. Open chat modal
-    this.ui.setChatModalOpen(true);
-
-    // 3. Chemistry affinity bonus (+3%)
-    const newScore = Math.min(100, (this.state.chemistryScore || 0) + 3);
-    this.state.chemistryScore = newScore;
-    this.ui.renderChemistry(newScore);
-
-    // 4. Send atomically via Standalone Chat API
-    if (this.roomSession && this.chatAPI) {
-      const cardPrompt = this.ui.elements.cardPromptText?.textContent || '';
-      const sent = await this.chatAPI.sendMessage(text, {
-        isCardResponse: true,
-        cardId: this.state.currentCard.id,
-        cardPrompt,
-        chemistryScore: newScore
-      });
-
-      if (sent) {
-        this.renderedMessageIds.add(sent.id);
-        this.ui.addChatMessage({
-          ...sent,
-          isOutgoing: true,
-          isCardResponse: true,
-          cardPrompt
-        });
-      }
-
-      this.syncRoomState('CARD_RESPONSE');
-      this.ui.showToast('¡Respuesta enviada a tu cita!');
-    } else {
-      this.ui.addChatMessage({
-        authorName,
-        isOutgoing: true,
-        text,
-        timeStr: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isCardResponse: true,
-        cardPrompt
-      });
-      this.ui.showToast('¡Respuesta guardada en la conversación!');
-    }
   }
 
   /**
@@ -1159,7 +1025,9 @@ class ChemBlindAppController {
       try {
         sessionStorage.removeItem(`chemblind_session_${this.roomSession.code}`);
         sessionStorage.removeItem(`chemblind_draft_${this.roomSession.code}`);
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[ChemBlind] No se pudo limpiar sessionStorage de la sala:', e);
+      }
     }
     if (this.roomSession?.channel) {
       try {
@@ -1273,7 +1141,6 @@ class ChemBlindAppController {
 
   startLocalSession(playerOne, playerTwo, gameMode, initialLevel) {
     this.teardownRoomSession();
-    this.ui.resetResponseSection();
     this.state = createInitialGameState({
       playerOne,
       playerTwo,

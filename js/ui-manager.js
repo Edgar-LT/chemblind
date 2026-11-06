@@ -20,7 +20,6 @@ export class UIManager {
       changePlayersBtn: byId('change-players-btn'),
       navPlayersLabel: byId('nav-players-label'),
       navModeBadge: byId('nav-mode-badge'),
-      navRoomsAvailableTag: byId('nav-rooms-available-tag'),
       viewRoomsBtn: byId('view-rooms-btn'),
       activeRoomsCountLabel: byId('active-rooms-count-label'),
       openCustomModalBtn: byId('open-custom-modal-btn'),
@@ -84,31 +83,17 @@ export class UIManager {
       chronoToggleBtn: byId('chrono-toggle-btn'),
       chronoResetBtn: byId('chrono-reset-btn'),
 
-      // Card Footer Actions
+      // Card Footer & Chat Trigger Actions
       completeTurnBtn: byId('complete-turn-btn'),
       wildcardSkipBtn: byId('wildcard-skip-btn'),
       wildcardBtnCount: byId('wildcard-btn-count'),
-
-      // Interactive Card Response Section
-      cardResponseSection: byId('card-response-section'),
-      responseInputBox: byId('response-input-box'),
-      cardResponseInput: byId('card-response-input'),
-      responseCharCount: byId('response-char-count'),
-      sendResponseBtn: byId('send-response-btn'),
       cardOpenChatBtn: byId('card-open-chat-btn'),
-      responseDisplayBox: byId('response-display-box'),
-      responseAuthorName: byId('response-author-name'),
-      responseDisplayText: byId('response-display-text'),
-      editResponseBtn: byId('edit-response-btn'),
-      responseStatusBadge: byId('response-status-badge'),
-      openChatModalBtn: byId('open-chat-modal-btn'),
 
       // Realtime Conversation Modal (Facebook Messenger / Haute Horlogerie Style)
       chatConversationModal: byId('chat-conversation-modal'),
       chatModalPartnerName: byId('chat-modal-partner-name'),
       closeChatModalBtn: byId('close-chat-modal-btn'),
       popoutChatBtn: byId('popout-chat-btn'),
-      chatModalCardPrompt: byId('chat-modal-card-prompt'),
       chatModalMessages: byId('chat-modal-messages'),
       chatModalForm: byId('chat-modal-form'),
       chatModalInput: byId('chat-modal-input'),
@@ -269,16 +254,13 @@ export class UIManager {
     // Level selector tabs
     this.elements.levelTabs.forEach((tab) => {
       const lvl = Number(tab.getAttribute('data-level-btn'));
-      tab.classList.toggle('active', lvl === state.currentLevel);
+      const isActive = lvl === state.currentLevel;
+      tab.classList.toggle('active', isActive);
+      tab.setAttribute('aria-selected', String(isActive));
     });
 
     // Chemistry meter
-    if (this.elements.chemistryPercentage) {
-      this.elements.chemistryPercentage.textContent = `${state.chemistryScore}%`;
-    }
-    if (this.elements.chemistryBarFill) {
-      this.elements.chemistryBarFill.style.width = `${state.chemistryScore}%`;
-    }
+    this.renderChemistry(state.chemistryScore);
 
     // Card Details
     if (this.elements.turnBadgeText) {
@@ -315,9 +297,6 @@ export class UIManager {
           ? formatCardPrompt(card.hint, activePlayer.name, otherPlayer.name)
           : '';
       }
-
-      // Sync Facebook-style Chat Context & Partner Name
-      this.setChatCardPrompt(card.text);
     }
 
     const partnerName = roomSession
@@ -335,72 +314,16 @@ export class UIManager {
   }
 
   /**
-   * Resets the interactive card response box to its empty drafting state.
+   * Updates the chemistry affinity percentage readout and progress bar.
+   * @param {number} score
    */
-  resetResponseSection() {
-    if (this.elements.cardResponseInput) {
-      this.elements.cardResponseInput.value = '';
+  renderChemistry(score) {
+    const safeScore = Math.min(100, Math.max(0, Math.round(Number(score) || 0)));
+    if (this.elements.chemistryPercentage) {
+      this.elements.chemistryPercentage.textContent = `${safeScore}%`;
     }
-    if (this.elements.responseCharCount) {
-      this.elements.responseCharCount.textContent = '0 / 360';
-    }
-    if (this.elements.responseDisplayText) {
-      this.elements.responseDisplayText.textContent = '';
-    }
-    if (this.elements.responseAuthorName) {
-      this.elements.responseAuthorName.textContent = '';
-    }
-    this.elements.responseInputBox?.classList.remove('is-hidden');
-    this.elements.responseDisplayBox?.classList.add('is-hidden');
-    if (this.elements.editResponseBtn) {
-      this.elements.editResponseBtn.style.display = '';
-    }
-  }
-
-  /**
-   * Displays a submitted card response in the refined quote container.
-   * @param {string} authorName
-   * @param {string} text
-   * @param {boolean} canEdit
-   */
-  showResponseDisplay(authorName, text, canEdit = true) {
-    if (this.elements.responseAuthorName) {
-      this.elements.responseAuthorName.textContent = authorName;
-    }
-    if (this.elements.responseDisplayText) {
-      this.elements.responseDisplayText.textContent = text;
-    }
-    if (this.elements.editResponseBtn) {
-      this.elements.editResponseBtn.style.display = canEdit ? 'inline-flex' : 'none';
-    }
-    this.elements.responseInputBox?.classList.add('is-hidden');
-    this.elements.responseDisplayBox?.classList.remove('is-hidden');
-  }
-
-  /**
-   * Restores input mode for editing an existing response.
-   * @param {string} prefilledText
-   */
-  showResponseInput(prefilledText = '') {
-    if (this.elements.cardResponseInput) {
-      if (prefilledText) {
-        this.elements.cardResponseInput.value = prefilledText;
-      }
-      this.updateResponseCharCount(this.elements.cardResponseInput.value.length);
-      this.elements.cardResponseInput.focus();
-    }
-    this.elements.responseInputBox?.classList.remove('is-hidden');
-    this.elements.responseDisplayBox?.classList.add('is-hidden');
-  }
-
-  /**
-   * Updates the character counter for the response textarea.
-   * @param {number} count
-   * @param {number} [max=360]
-   */
-  updateResponseCharCount(count, max = 360) {
-    if (this.elements.responseCharCount) {
-      this.elements.responseCharCount.textContent = `${count} / ${max}`;
+    if (this.elements.chemistryBarFill) {
+      this.elements.chemistryBarFill.style.width = `${safeScore}%`;
     }
   }
 
@@ -644,17 +567,25 @@ export class UIManager {
   }
 
   /**
-   * Resets the chat messages feed to its initial empty placeholder state.
+   * Resets the chat messages feed to its initial empty placeholder state using safe DOM nodes.
    */
   clearChatMessages() {
     const list = this.elements.chatModalMessages;
     if (!list) return;
-    list.innerHTML = `
-      <div class="chat-empty-state">
-        <span class="chat-empty-icon">💬</span>
-        <p>Aún no hay mensajes. ¡Sé el primero en escribir o responde a la carta!</p>
-      </div>
-    `;
+    list.textContent = '';
+
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'chat-empty-state';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'chat-empty-icon';
+    iconSpan.textContent = '💬';
+
+    const p = document.createElement('p');
+    p.textContent = 'Aún no hay mensajes. ¡Sé el primero en escribir o responde a la carta!';
+
+    emptyDiv.append(iconSpan, p);
+    list.appendChild(emptyDiv);
   }
 
   /**
@@ -664,16 +595,6 @@ export class UIManager {
   setChatPartnerName(name) {
     if (this.elements.chatModalPartnerName) {
       this.elements.chatModalPartnerName.textContent = name || 'Tu Cita';
-    }
-  }
-
-  /**
-   * Updates the card context bar in the chat modal.
-   * @param {string} promptText
-   */
-  setChatCardPrompt(promptText) {
-    if (this.elements.chatModalCardPrompt) {
-      this.elements.chatModalCardPrompt.textContent = promptText || 'Selecciona una carta para conversar.';
     }
   }
 
@@ -753,16 +674,6 @@ export class UIManager {
       }
     }
 
-    // Unified pill inside active game session
-    if (this.elements.navRoomsAvailableTag) {
-      if (count > 0) {
-        this.elements.navRoomsAvailableTag.classList.remove('is-hidden');
-        this.elements.navRoomsAvailableTag.textContent = `${count} ${count === 1 ? 'disponible' : 'disponibles'}`;
-      } else {
-        this.elements.navRoomsAvailableTag.classList.add('is-hidden');
-      }
-    }
-
     if (this.elements.activeRoomsBanner) {
       if (count > 0 && isRoomSelected) {
         this.elements.activeRoomsBanner.classList.remove('is-hidden');
@@ -776,5 +687,28 @@ export class UIManager {
         this.elements.activeRoomsBanner.classList.add('is-hidden');
       }
     }
+  }
+
+  /**
+   * Closes any open modal overlay when Escape is pressed.
+   * @returns {boolean} True if a modal was closed
+   */
+  closeTopModal() {
+    if (this.elements.customCardModal?.classList.contains('is-open')) {
+      this.setCustomCardModalOpen(false);
+      this.elements.openCustomModalBtn?.focus();
+      return true;
+    }
+    if (this.elements.activeRoomsModal?.classList.contains('is-open')) {
+      this.setRoomsModalOpen(false);
+      this.elements.viewRoomsBtn?.focus();
+      return true;
+    }
+    if (this.isChatModalOpen()) {
+      this.setChatModalOpen(false);
+      this.elements.cardOpenChatBtn?.focus();
+      return true;
+    }
+    return false;
   }
 }
