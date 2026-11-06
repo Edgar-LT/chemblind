@@ -302,16 +302,16 @@ class ChemBlindAppController {
     });
 
     el.popoutChatBtn?.addEventListener('click', () => {
-      if (this.roomSession?.code) {
-        const myName = this.roomSession.role === 'player_one' ? this.roomSession.p1Name : this.roomSession.p2Name;
-        window.open(`./chat.html?room=${this.roomSession.code}&name=${encodeURIComponent(myName || 'Jugador')}`, '_blank');
+      const isDocked = this.ui.toggleChatDocked();
+      if (isDocked) {
+        this.ui.showToast('💬 Ventanita activa: interactúa con el juego y chatea al mismo tiempo');
       } else {
-        this.ui.showToast('La sala debe estar activa para abrir el chat en pestaña independiente');
+        this.ui.showToast('Chat centrado');
       }
     });
 
     el.chatConversationModal?.addEventListener('click', (e) => {
-      if (e.target === el.chatConversationModal) {
+      if (!el.chatConversationModal.classList.contains('is-docked-window') && e.target === el.chatConversationModal) {
         this.ui.setChatModalOpen(false);
       }
     });

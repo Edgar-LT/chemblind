@@ -561,12 +561,66 @@ export class UIManager {
    * Opens or closes the Facebook-style conversation modal.
    * @param {boolean} isOpen
    */
+  /**
+   * Toggles between full-screen modal mode and non-blocking floating window mode.
+   * In floating window mode, the backdrop does not block clicks, allowing the user
+   * to interact with the game (next card, custom card, etc.) while chatting.
+   * @param {boolean} [forceState]
+   * @returns {boolean}
+   */
+  toggleChatDocked(forceState) {
+    const modal = this.elements.chatConversationModal;
+    if (!modal) return false;
+
+    const isCurrentlyDocked = modal.classList.contains('is-docked-window');
+    const shouldDock = typeof forceState === 'boolean' ? forceState : !isCurrentlyDocked;
+
+    if (shouldDock) {
+      modal.classList.add('is-docked-window');
+      if (this.elements.popoutChatBtn) {
+        this.elements.popoutChatBtn.textContent = '⤡';
+        this.elements.popoutChatBtn.title = 'Centrar modal de chat';
+        this.elements.popoutChatBtn.setAttribute('aria-label', 'Centrar modal de chat');
+      }
+      try {
+        localStorage.setItem('chemblind_chat_docked', 'true');
+      } catch {
+        /* storage unavailable */
+      }
+    } else {
+      modal.classList.remove('is-docked-window');
+      if (this.elements.popoutChatBtn) {
+        this.elements.popoutChatBtn.textContent = '↗';
+        this.elements.popoutChatBtn.title = 'Fijar como ventanita flotante para jugar y chatear';
+        this.elements.popoutChatBtn.setAttribute('aria-label', 'Fijar como ventanita flotante');
+      }
+      try {
+        localStorage.setItem('chemblind_chat_docked', 'false');
+      } catch {
+        /* storage unavailable */
+      }
+    }
+    return shouldDock;
+  }
+
+  /**
+   * Opens or closes the Facebook-style conversation modal.
+   * @param {boolean} isOpen
+   */
   setChatModalOpen(isOpen) {
     const modal = this.elements.chatConversationModal;
     if (!modal) return;
 
     if (isOpen) {
-      modal.style.display = 'grid';
+      // Check user preference for docked window
+      try {
+        const isSavedDocked = localStorage.getItem('chemblind_chat_docked') === 'true';
+        this.toggleChatDocked(isSavedDocked);
+      } catch {
+        /* ignore */
+      }
+
+      modal.style.display = 'flex';
       void modal.offsetWidth;
       modal.classList.add('is-open');
       setTimeout(() => {
