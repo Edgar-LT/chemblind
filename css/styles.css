@@ -2363,3 +2363,18 @@ textarea {
   background: rgba(197, 160, 89, 0.12);
   color: #111215;
 }
+
+  #view-rooms-btn {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (max-width: 640px) {
+    #active-rooms-count-label {
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }

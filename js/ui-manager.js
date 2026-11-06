@@ -259,8 +259,10 @@ export class UIManager {
         : modeMeta.shortLabel;
     }
 
-    // Hide standalone view-rooms-btn in game (it is unified into change-players-btn)
-    this.elements.viewRoomsBtn?.classList.add('is-hidden');
+    // Mantener visible el botón de salas disponibles si hay salas para cambiar
+    if (this.elements.viewRoomsBtn && this.elements.activeRoomsCountLabel?.textContent?.includes('disponible')) {
+      this.elements.viewRoomsBtn.classList.remove('is-hidden');
+    }
 
     if (this.elements.modalExitGameBtn) {
       if (roomSession) {

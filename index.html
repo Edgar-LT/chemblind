@@ -18,7 +18,7 @@
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <link rel="stylesheet" href="./css/styles.css?v=2.3.9" />
+  <link rel="stylesheet" href="./css/styles.css?v=2.4.0" />
 </head>
 <body>
 
@@ -31,14 +31,19 @@
       </div>
 
       <div class="nav-controls">
-        <!-- Píldora unificada de sesión y salas activas -->
-        <button type="button" id="change-players-btn" class="players-pill is-hidden" title="Ver sala actual y administrar salas">
+        <!-- Botón 1: Indicador de sala actual / jugadores -> Te lleva siempre a la pantalla inicial de creación -->
+        <button type="button" id="change-players-btn" class="players-pill is-hidden" title="Volver a la pantalla inicial de creación">
           <span class="dot-active"></span>
           <span id="nav-mode-badge" class="pill-mode-tag">Sala</span>
           <span class="pill-divider">·</span>
           <span id="nav-players-label">Jugadores</span>
-          <span id="nav-rooms-available-tag" class="pill-rooms-tag is-hidden"></span>
-          <span class="pill-edit-icon">▾</span>
+          <span class="pill-edit-icon" title="Volver al inicio">✎</span>
+        </button>
+
+        <!-- Botón 2: Selector de Salas Disponibles para moverte entre salas -->
+        <button type="button" id="view-rooms-btn" class="icon-btn is-hidden" title="Ver salas disponibles y cambiar de sala">
+          <span class="dot-active" style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent-champagne);"></span>
+          <span id="active-rooms-count-label">Salas disponibles</span>
         </button>
 
         <button type="button" id="open-custom-modal-btn" class="icon-btn is-hidden" title="Crear pregunta propia">
@@ -50,12 +55,6 @@
         <button type="button" id="nav-chat-btn" class="nav-chat-btn is-hidden" title="Abrir chat en directo">
           <span>💬</span>
           <span class="nav-chat-label">Chat</span>
-        </button>
-
-        <!-- Botón de Salas (visible en Onboarding si hay salas activas) -->
-        <button type="button" id="view-rooms-btn" class="icon-btn is-hidden" title="Ver salas disponibles">
-          <span class="dot-active" style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent-champagne);"></span>
-          <span id="active-rooms-count-label">Salas disponibles</span>
         </button>
 
         <button type="button" id="theme-toggle-btn" class="icon-btn" aria-label="Alternar tema de color" title="Alternar tema claro/oscuro">
@@ -540,6 +539,6 @@
   <!-- Notificación Toast Discreta -->
   <div id="toast-notification" class="toast-notification" role="status" aria-live="polite"></div>
 
-  <script type="module" src="./js/app.js?v=2.3.9"></script>
+  <script type="module" src="./js/app.js?v=2.4.0"></script>
 </body>
 </html>

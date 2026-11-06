@@ -192,18 +192,15 @@ class ChemBlindAppController {
       this.ui.showScreen('onboarding');
     });
 
-    // Unified Room Hub & Change Players Button
+    // Botón de sala actual: Te lleva SIEMPRE a la pantalla inicial de creación
     el.changePlayersBtn?.addEventListener('click', () => {
-      if (this.roomSession) {
-        this.openActiveRoomsModal();
-      } else {
-        this.teardownRoomSession();
-        this.chrono.stop();
-        this.ui.showScreen('onboarding');
-        window.history.replaceState({}, document.title, window.location.pathname);
-        const isRoom = document.querySelector('input[name="sessionType"]:checked')?.value === 'room';
-        this.ui.setSessionType(Boolean(isRoom));
-      }
+      this.teardownRoomSession();
+      this.chrono.stop();
+      this.ui.showScreen('onboarding');
+      window.history.replaceState({}, document.title, window.location.pathname);
+      const isRoom = document.querySelector('input[name="sessionType"]:checked')?.value === 'room';
+      this.ui.setSessionType(Boolean(isRoom));
+      this.ui.showToast('Regresaste a la pantalla inicial de creación.');
     });
 
     // Exit Game Button inside Active Rooms Modal
@@ -1186,7 +1183,7 @@ class ChemBlindAppController {
   }
 
   async refreshActiveRooms() {
-    if (this.pendingInvite || this.roomSession?.role === 'player_two') {
+    if (this.pendingInvite) {
       this.ui.elements.viewRoomsBtn?.classList.add('is-hidden');
       this.ui.elements.activeRoomsBanner?.classList.add('is-hidden');
       return;
@@ -1197,6 +1194,13 @@ class ChemBlindAppController {
       const count = this.activeRoomsList.length;
       const isRoomSelected = document.querySelector('input[name="sessionType"]:checked')?.value === 'room';
       this.ui.updateActiveRoomsCount(count, isRoomSelected);
+
+      // Mostrar el botón de salas disponibles si hay al menos 1 sala disponible para moverte
+      if (count > 0) {
+        this.ui.elements.viewRoomsBtn?.classList.remove('is-hidden');
+      } else if (!this.roomSession) {
+        this.ui.elements.viewRoomsBtn?.classList.add('is-hidden');
+      }
     } catch (err) {
       console.warn('Error actualizando salas activas:', err);
     }
