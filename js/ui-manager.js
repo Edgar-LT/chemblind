@@ -104,8 +104,6 @@ export class UIManager {
       openChatModalBtn: byId('open-chat-modal-btn'),
 
       // Realtime Conversation Modal (Facebook Messenger / Haute Horlogerie Style)
-      navChatBtn: byId('nav-chat-btn'),
-      floatingChatTrigger: byId('floating-chat-trigger'),
       chatConversationModal: byId('chat-conversation-modal'),
       chatModalPartnerName: byId('chat-modal-partner-name'),
       closeChatModalBtn: byId('close-chat-modal-btn'),
@@ -164,8 +162,6 @@ export class UIManager {
     this.elements.onboardingScreen?.classList.add('is-hidden');
     this.elements.roomWaitingScreen?.classList.add('is-hidden');
     this.elements.gameScreen?.classList.add('is-hidden');
-    this.elements.navChatBtn?.classList.add('is-hidden');
-    this.elements.floatingChatTrigger?.classList.add('is-hidden');
 
     if (screen === 'onboarding') {
       this.elements.onboardingScreen?.classList.remove('is-hidden');
@@ -192,8 +188,6 @@ export class UIManager {
       this.elements.gameScreen?.classList.remove('is-hidden');
       this.elements.changePlayersBtn?.classList.remove('is-hidden');
       this.elements.openCustomModalBtn?.classList.remove('is-hidden');
-      this.elements.navChatBtn?.classList.remove('is-hidden');
-      this.elements.floatingChatTrigger?.classList.remove('is-hidden');
     }
   }
 

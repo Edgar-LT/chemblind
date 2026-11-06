@@ -297,14 +297,6 @@ class ChemBlindAppController {
       this.ui.setChatModalOpen(true);
     });
 
-    el.navChatBtn?.addEventListener('click', () => {
-      this.ui.setChatModalOpen(true);
-    });
-
-    el.floatingChatTrigger?.addEventListener('click', () => {
-      this.ui.setChatModalOpen(true);
-    });
-
     el.closeChatModalBtn?.addEventListener('click', () => {
       this.ui.setChatModalOpen(false);
     });
