@@ -2203,12 +2203,14 @@ textarea {
     display: flex;
   }
 
-  .footer-secondary-actions #wildcard-skip-btn {
+  .footer-secondary-actions #open-custom-modal-btn,
+  .footer-secondary-actions .btn-ghost {
     width: 100%;
     min-height: 48px;
     border-radius: 9999px;
     font-size: 0.88rem;
     justify-content: center;
+    white-space: nowrap;
   }
 
   .btn-flagship#complete-turn-btn {

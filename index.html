@@ -18,7 +18,7 @@
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <link rel="stylesheet" href="./css/styles.css?v=2.4.0" />
+  <link rel="stylesheet" href="./css/styles.css?v=2.4.1" />
 </head>
 <body>
 
@@ -44,11 +44,6 @@
         <button type="button" id="view-rooms-btn" class="icon-btn is-hidden" title="Ver salas disponibles y cambiar de sala">
           <span class="dot-active" style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent-champagne);"></span>
           <span id="active-rooms-count-label">Salas disponibles</span>
-        </button>
-
-        <button type="button" id="open-custom-modal-btn" class="icon-btn is-hidden" title="Crear pregunta propia">
-          <span class="nav-custom-icon">+</span>
-          <span class="nav-custom-text">Crear Pregunta</span>
         </button>
 
         <!-- Botón de Chat en Cabecera -->
@@ -384,9 +379,8 @@
         </div><!-- Pie de la Carta: Acciones Limpias -->
         <div class="card-footer">
           <div class="footer-secondary-actions">
-            <button type="button" id="wildcard-skip-btn" class="btn-ghost" title="Saltar esta carta usando un comodín">
-              <span>Saltar</span>
-              <span id="wildcard-btn-count" class="tabular-nums">(2)</span>
+            <button type="button" id="open-custom-modal-btn" class="btn-ghost" title="Crear una pregunta o reto personalizado">
+              <span>+ Crear Pregunta</span>
             </button>
           </div>
 
@@ -539,6 +533,6 @@
   <!-- Notificación Toast Discreta -->
   <div id="toast-notification" class="toast-notification" role="status" aria-live="polite"></div>
 
-  <script type="module" src="./js/app.js?v=2.4.0"></script>
+  <script type="module" src="./js/app.js?v=2.4.1"></script>
 </body>
 </html>
